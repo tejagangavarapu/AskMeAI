@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<!-- index.html : the STRUCTURE (skeleton) of the page -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <!-- This line makes the page fit phone screens -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Aks Me AI - Your AI Study Buddy</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app">
+
+    <!-- ================= SIDEBAR (left) ================= -->
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">🎓 Aks Me <span>AI</span></div>
+
+      <button class="new-chat" id="newChatBtn">+ New chat</button>
+
+      <p class="side-title">Learning tools</p>
+      <!-- data-mode tells script.js which feature the button activates -->
+      <nav class="tools">
+        <button class="tool active" data-mode="chat">💬 Ask anything</button>
+        <button class="tool" data-mode="tutor">👨‍💻 Programming tutor</button>
+        <button class="tool" data-mode="notes">📝 Study notes</button>
+        <button class="tool" data-mode="quiz">❓ Quiz</button>
+        <button class="tool" data-mode="flashcards">🃏 Flashcards</button>
+        <button class="tool" data-mode="planner">📅 Study planner</button>
+        <button class="tool" data-mode="challenge">🧩 Coding challenge</button>
+        <button class="tool" data-mode="interview">🎯 Interview questions</button>
+        <button class="tool" data-mode="resume">📄 Resume guidance</button>
+      </nav>
+
+      <p class="side-foot">AI can make mistakes. Verify important facts with your textbook or teacher.</p>
+    </aside>
+
+    <!-- ================= MAIN CHAT AREA ================= -->
+    <main class="main">
+      <header class="topbar">
+        <!-- Hamburger button: only visible on phones -->
+        <button class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+        <div>
+          <div class="mode-name" id="modeName">Ask anything</div>
+          <div class="mode-hint" id="modeHint">Ask any study question</div>
+        </div>
+        <!-- Language picker: only visible in Programming tutor mode -->
+        <select id="langSelect" class="lang hidden" aria-label="Programming language">
+          <option>Python</option>
+          <option>C</option>
+          <option>C++</option>
+          <option>Java</option>
+          <option>HTML</option>
+          <option>CSS</option>
+          <option>JavaScript</option>
+        </select>
+      </header>
+
+      <!-- All messages are added into this box by script.js -->
+      <section class="chat" id="chat">
+        <div class="welcome" id="welcome">
+          <h1>Hi! I'm Aks Me AI 👋</h1>
+          <p>Your study buddy for programming, AI/ML, maths and engineering subjects.</p>
+          <div class="chips">
+            <button class="chip" data-text="Explain what a neural network is, step by step">Explain neural networks</button>
+            <button class="chip" data-text="Teach me loops in Python with examples">Python loops</button>
+            <button class="chip" data-text="Difference between supervised and unsupervised learning">Supervised vs Unsupervised</button>
+            <button class="chip" data-text="Explain pointers in C for a beginner">Pointers in C</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Input bar at the bottom -->
+      <footer class="composer">
+        <textarea id="input" rows="1" placeholder="Type your question... (Enter to send, Shift+Enter for new line)"></textarea>
+        <button id="sendBtn" aria-label="Send">➤</button>
+      </footer>
+    </main>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
