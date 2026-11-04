@@ -1,9 +1,11 @@
 /* =====================================================
-   style.css : the LOOK of Aks Me AI (dark theme)
+   style.css : the LOOK of Aks Me AI
+   Two themes (dark + light) made with CSS variables.
    ===================================================== */
 
-/* CSS variables = colours stored in one place. Change here, changes everywhere. */
-:root {
+/* ---------- Colours. Change them here and the whole site changes. ---------- */
+:root,
+:root[data-theme="dark"] {
   --bg: #0f1117;
   --panel: #171a23;
   --panel-2: #1f2330;
@@ -13,6 +15,40 @@
   --accent: #7c5cff;
   --accent-2: #5b8cff;
   --user-bubble: #3b3f9e;
+  --user-text: #ffffff;
+  --code-bg: #0b0d13;
+  --code-bar: #151925;
+  --error-bg: #3a1d24;
+  --error-border: #7a2c3b;
+  --good: #2fb67c;
+  --good-bg: #123325;
+  --bad: #e5594b;
+  --bad-bg: #3a1d24;
+  --shadow: rgba(0, 0, 0, 0.5);
+  color-scheme: dark;
+}
+
+:root[data-theme="light"] {
+  --bg: #f4f5fb;
+  --panel: #ffffff;
+  --panel-2: #eef0f8;
+  --border: #d9dcea;
+  --text: #1b1f2e;
+  --muted: #5d6578;
+  --accent: #5b3df5;
+  --accent-2: #3b74ff;
+  --user-bubble: #4a46d8;
+  --user-text: #ffffff;
+  --code-bg: #f0f2f9;
+  --code-bar: #e3e6f2;
+  --error-bg: #fde8ea;
+  --error-border: #f0a4ae;
+  --good: #14804f;
+  --good-bg: #dcf5e8;
+  --bad: #c62f20;
+  --bad-bg: #fde8ea;
+  --shadow: rgba(30, 40, 80, 0.25);
+  color-scheme: light;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -23,72 +59,108 @@ body {
   font-family: "Segoe UI", system-ui, -apple-system, Roboto, sans-serif;
   background: var(--bg);
   color: var(--text);
+  -webkit-text-size-adjust: 100%;
 }
 
-/* Whole app = sidebar + main, side by side */
+button, select, input, textarea { font-family: inherit; color: inherit; }
+.hidden { display: none !important; }
+.muted { color: var(--muted); font-size: 0.85rem; }
+
+/* Whole app = sidebar + main, side by side. dvh = real visible height on phones. */
 .app { display: flex; height: 100vh; height: 100dvh; }
 
 /* ---------------- Sidebar ---------------- */
 .sidebar {
-  width: 270px;
+  width: 280px;
+  flex-shrink: 0;
   background: var(--panel);
   border-right: 1px solid var(--border);
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   overflow-y: auto;
 }
-.brand { font-size: 1.3rem; font-weight: 700; padding: 4px 4px 10px; }
+.brand { font-size: 1.3rem; font-weight: 700; padding: 4px 4px 8px; }
 .brand span { color: var(--accent); }
 
 .new-chat {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
-  color: #fff; border: 0; padding: 10px; border-radius: 10px;
+  color: #fff; border: 0; padding: 11px; border-radius: 10px;
   font-size: 0.95rem; cursor: pointer; font-weight: 600;
 }
 .new-chat:hover { opacity: 0.9; }
 
-.side-title { color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 8px; }
-.tools { display: flex; flex-direction: column; gap: 4px; }
+.side-title { color: var(--muted); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 10px; }
+.tools { display: flex; flex-direction: column; gap: 2px; }
 .tool {
-  text-align: left; background: transparent; color: var(--text);
-  border: 0; padding: 10px 12px; border-radius: 8px; cursor: pointer; font-size: 0.92rem;
+  text-align: left; background: transparent; border: 0;
+  padding: 9px 12px; border-radius: 8px; cursor: pointer; font-size: 0.92rem;
+  border-left: 3px solid transparent;
 }
 .tool:hover { background: var(--panel-2); }
-.tool.active { background: var(--panel-2); border-left: 3px solid var(--accent); }
-.side-foot { margin-top: auto; color: var(--muted); font-size: 0.72rem; line-height: 1.4; }
+.tool.active { background: var(--panel-2); border-left-color: var(--accent); }
+
+/* Saved chats list */
+.chat-list { display: flex; flex-direction: column; gap: 2px; }
+.chat-list .empty { color: var(--muted); font-size: 0.82rem; padding: 4px 8px; }
+.chat-item { display: flex; align-items: center; border-radius: 8px; }
+.chat-item:hover, .chat-item.active { background: var(--panel-2); }
+.chat-open {
+  flex: 1; min-width: 0; text-align: left; background: none; border: 0; cursor: pointer;
+  padding: 8px 10px; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.chat-del {
+  background: none; border: 0; cursor: pointer; color: var(--muted);
+  padding: 8px 10px; font-size: 0.8rem; border-radius: 8px;
+}
+.chat-del:hover { color: var(--bad); }
+
+.side-foot { margin-top: auto; padding-top: 10px; color: var(--muted); font-size: 0.72rem; line-height: 1.4; }
+
+/* Dark layer behind the sidebar on phones */
+.backdrop { display: none; }
 
 /* ---------------- Main area ---------------- */
 .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 
 .topbar {
-  display: flex; align-items: center; gap: 12px;
-  padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--panel);
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border); background: var(--panel);
 }
-.mode-name { font-weight: 600; }
-.mode-hint { color: var(--muted); font-size: 0.8rem; }
-.menu-btn { display: none; background: none; border: 0; color: var(--text); font-size: 1.5rem; cursor: pointer; }
-.lang {
-  margin-left: auto; background: var(--panel-2); color: var(--text);
-  border: 1px solid var(--border); padding: 6px 10px; border-radius: 8px;
+.titles { min-width: 0; flex: 1; }
+.mode-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mode-hint { color: var(--muted); font-size: 0.8rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.controls { display: flex; align-items: center; gap: 6px; }
+
+.icon-btn {
+  width: 40px; height: 40px; flex-shrink: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent; border: 1px solid transparent; border-radius: 10px;
+  font-size: 1.1rem; cursor: pointer;
 }
-.hidden { display: none; }
+.icon-btn:hover { background: var(--panel-2); }
+.menu-btn { display: none; font-size: 1.4rem; }
+
+.sel {
+  background: var(--panel-2); border: 1px solid var(--border);
+  padding: 8px 10px; border-radius: 8px; font-size: 0.85rem;
+}
 
 /* ---------------- Chat area ---------------- */
 .chat {
   flex: 1; overflow-y: auto; padding: 24px 20px;
   display: flex; flex-direction: column; gap: 16px;
-  scroll-behavior: smooth;
 }
 
 .welcome { margin: auto; text-align: center; max-width: 520px; }
 .welcome h1 { font-size: 1.8rem; margin-bottom: 8px; }
 .welcome p { color: var(--muted); margin-bottom: 20px; }
+.welcome .tip { margin-top: 20px; font-size: 0.85rem; margin-bottom: 0; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
 .chip {
-  background: var(--panel-2); color: var(--text); border: 1px solid var(--border);
-  padding: 8px 14px; border-radius: 20px; cursor: pointer; font-size: 0.85rem;
+  background: var(--panel-2); border: 1px solid var(--border);
+  padding: 9px 14px; border-radius: 20px; cursor: pointer; font-size: 0.85rem;
 }
 .chip:hover { border-color: var(--accent); }
 
@@ -97,30 +169,42 @@ body {
 .msg.user { justify-content: flex-end; }
 .msg.ai { justify-content: flex-start; }
 
+.bubble-wrap { display: flex; flex-direction: column; max-width: min(780px, 88%); min-width: 0; }
+.msg.user .bubble-wrap { align-items: flex-end; }
+
 .bubble {
-  max-width: min(780px, 88%);
   padding: 12px 16px; border-radius: 16px;
-  line-height: 1.6; font-size: 0.95rem; overflow-wrap: anywhere;
+  line-height: 1.6; font-size: 0.95rem; overflow-wrap: anywhere; max-width: 100%;
 }
-.msg.user .bubble { background: var(--user-bubble); border-bottom-right-radius: 4px; white-space: pre-wrap; }
+.msg.user .bubble { background: var(--user-bubble); color: var(--user-text); border-bottom-right-radius: 4px; white-space: pre-wrap; }
 .msg.ai .bubble { background: var(--panel-2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
-.msg.error .bubble { background: #3a1d24; border-color: #7a2c3b; }
+.msg.error .bubble { background: var(--error-bg); border-color: var(--error-border); }
 
 /* Formatting inside AI answers */
 .bubble h1, .bubble h2, .bubble h3 { margin: 12px 0 6px; font-size: 1.05rem; }
+.bubble > :first-child { margin-top: 0; }
 .bubble p { margin: 6px 0; }
 .bubble ul, .bubble ol { margin: 6px 0 6px 22px; }
-.bubble code { background: #0b0d13; padding: 2px 6px; border-radius: 5px; font-family: Consolas, monospace; font-size: 0.88em; }
+.bubble code { background: var(--code-bg); padding: 2px 6px; border-radius: 5px; font-family: Consolas, monospace; font-size: 0.88em; }
 .bubble table { border-collapse: collapse; margin: 8px 0; display: block; overflow-x: auto; }
 .bubble th, .bubble td { border: 1px solid var(--border); padding: 6px 10px; font-size: 0.88rem; }
+.stopped { color: var(--muted); font-size: 0.8rem; }
 
 /* Code block with a header bar and Copy button */
-.codebox { margin: 10px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: #0b0d13; }
-.codebar { display: flex; justify-content: space-between; padding: 6px 12px; background: #151925; color: var(--muted); font-size: 0.75rem; }
-.copy { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 0.75rem; }
+.codebox { margin: 10px 0; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--code-bg); }
+.codebar { display: flex; justify-content: space-between; align-items: center; padding: 4px 12px; background: var(--code-bar); color: var(--muted); font-size: 0.75rem; }
+.copy { background: none; border: 0; color: var(--muted); cursor: pointer; font-size: 0.75rem; padding: 6px 0 6px 12px; }
 .copy:hover { color: var(--text); }
 .codebox pre { padding: 12px; overflow-x: auto; }
 .codebox pre code { background: none; padding: 0; font-size: 0.85rem; }
+
+/* Buttons under each AI answer: Copy, Regenerate, Simpler, Deeper */
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.act {
+  background: transparent; border: 1px solid var(--border); color: var(--muted);
+  border-radius: 8px; padding: 6px 10px; font-size: 0.78rem; cursor: pointer;
+}
+.act:hover { color: var(--text); border-color: var(--accent); }
 
 /* "AI is typing..." dots */
 .typing span {
@@ -132,7 +216,7 @@ body {
 @keyframes blink { 0%, 80%, 100% { opacity: 0.2; } 40% { opacity: 1; } }
 
 /* ---------------- Flashcards ---------------- */
-.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; margin-top: 8px; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-top: 8px; }
 .card {
   min-height: 110px; padding: 14px; border-radius: 12px; cursor: pointer;
   background: var(--panel); border: 1px solid var(--accent);
@@ -141,33 +225,114 @@ body {
 .card.flipped { background: var(--accent); color: #fff; }
 .card-hint { color: var(--muted); font-size: 0.78rem; }
 
+/* ---------------- Quiz ---------------- */
+.quiz-q { margin-top: 14px; }
+.quiz-q h4 { font-size: 0.95rem; margin-bottom: 8px; line-height: 1.4; }
+.opt {
+  display: block; width: 100%; text-align: left; cursor: pointer;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  padding: 10px 12px; margin-bottom: 6px; font-size: 0.9rem; line-height: 1.4;
+}
+.opt:hover:not(:disabled) { border-color: var(--accent); }
+.opt:disabled { cursor: default; }
+.opt.correct { background: var(--good-bg); border-color: var(--good); }
+.opt.wrong { background: var(--bad-bg); border-color: var(--bad); }
+.explain { font-size: 0.85rem; color: var(--muted); margin: 6px 2px 0; }
+.quiz-score {
+  margin-top: 14px; padding: 10px 12px; border-radius: 10px; font-weight: 600;
+  background: var(--panel); border: 1px solid var(--accent);
+}
+
 /* ---------------- Input bar ---------------- */
+.attach-chip {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin: 0 16px; padding: 6px 12px; border-radius: 10px 10px 0 0;
+  background: var(--panel-2); border: 1px solid var(--border); border-bottom: 0;
+  font-size: 0.85rem; overflow: hidden;
+}
+.attach-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.attach-chip button { background: none; border: 0; cursor: pointer; font-size: 1rem; padding: 4px 8px; color: var(--muted); }
+
 .composer {
-  display: flex; gap: 10px; align-items: flex-end;
-  padding: 14px 20px; border-top: 1px solid var(--border); background: var(--panel);
+  display: flex; gap: 8px; align-items: flex-end;
+  padding: 12px 16px; border-top: 1px solid var(--border); background: var(--panel);
 }
 .composer textarea {
-  flex: 1; resize: none; max-height: 160px;
-  background: var(--panel-2); color: var(--text);
-  border: 1px solid var(--border); border-radius: 12px;
-  padding: 12px 14px; font-size: 0.95rem; font-family: inherit; outline: none;
+  flex: 1; min-width: 0; resize: none; max-height: 160px;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px;
+  padding: 11px 14px; font-size: 0.95rem; outline: none; line-height: 1.4;
 }
 .composer textarea:focus { border-color: var(--accent); }
-.composer button {
-  width: 46px; height: 46px; border: 0; border-radius: 12px; cursor: pointer;
+.send {
+  width: 44px; height: 44px; flex-shrink: 0; border: 0; border-radius: 12px; cursor: pointer;
   background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff; font-size: 1.1rem;
 }
-.composer button:disabled { opacity: 0.5; cursor: not-allowed; }
+.send.stop { background: var(--bad); }
+.icon-btn.listening { background: var(--bad); color: #fff; animation: pulse 1.2s infinite; }
+@keyframes pulse { 50% { opacity: 0.6; } }
 
-/* ---------------- Responsive (phones & small tablets) ---------------- */
+/* ---------------- Pop-ups (settings + progress) ---------------- */
+dialog {
+  margin: auto; padding: 22px; width: min(440px, 92vw); max-height: 90vh; overflow-y: auto;
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--border); border-radius: 16px;
+}
+dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+dialog h2 { font-size: 1.15rem; margin-bottom: 4px; }
+dialog label { display: block; margin: 14px 0 4px; font-size: 0.82rem; color: var(--muted); }
+dialog input, dialog select {
+  width: 100%; padding: 10px 12px; font-size: 1rem;
+  background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px;
+}
+.dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+.btn { padding: 10px 16px; border-radius: 10px; border: 1px solid var(--border); background: transparent; cursor: pointer; font-size: 0.9rem; }
+.btn.primary { background: linear-gradient(135deg, var(--accent), var(--accent-2)); border: 0; color: #fff; font-weight: 600; }
+.btn.ghost:hover { border-color: var(--accent); }
+
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin: 14px 0; }
+.stat { background: var(--panel-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px; }
+.stat b { display: block; font-size: 1.4rem; }
+.stat span { font-size: 0.78rem; color: var(--muted); }
+.plist { list-style: none; margin: 6px 0 12px; }
+.plist li { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 0.88rem; border-bottom: 1px solid var(--border); }
+.plist li span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+dialog h3 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 12px; }
+
+/* ---------------- Toast ---------------- */
+.toast {
+  position: fixed; left: 50%; bottom: 90px; transform: translateX(-50%) translateY(20px);
+  background: var(--text); color: var(--bg); padding: 10px 16px; border-radius: 10px;
+  font-size: 0.88rem; opacity: 0; pointer-events: none; transition: all 0.25s; z-index: 50;
+  max-width: 90vw; text-align: center; box-shadow: 0 6px 20px var(--shadow);
+}
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---------------- Phones & small tablets ---------------- */
 @media (max-width: 800px) {
-  .menu-btn { display: block; }
-  /* Sidebar slides in from the left when "open" class is added */
+  .menu-btn { display: inline-flex; }
+
+  /* Sidebar slides in from the left when it has the "open" class */
   .sidebar {
-    position: fixed; z-index: 10; top: 0; bottom: 0; left: 0;
+    position: fixed; z-index: 30; top: 0; bottom: 0; left: 0;
+    width: min(300px, 85vw);
     transform: translateX(-100%); transition: transform 0.25s;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
   }
-  .sidebar.open { transform: translateX(0); }
-  .bubble { max-width: 94%; }
-  .chat { padding: 16px 12px; }
+  .sidebar.open { transform: translateX(0); box-shadow: 4px 0 24px var(--shadow); }
+  .backdrop.show { display: block; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 20; }
+
+  .topbar { padding: 8px 10px; gap: 6px; }
+  .mode-hint { display: none; }
+  .controls { gap: 2px; }
+  .sel { max-width: 100px; padding: 8px 6px; font-size: 0.8rem; }
+
+  .chat { padding: 14px 10px; gap: 12px; }
+  .bubble-wrap { max-width: 94%; }
+  .welcome h1 { font-size: 1.5rem; }
+
+  .attach-chip { margin: 0 10px; }
+  .composer { padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); gap: 4px; }
+  /* 16px stops iPhones from zooming in when you tap the box */
+  .composer textarea, dialog input, dialog select { font-size: 16px; }
+  .toast { bottom: calc(80px + env(safe-area-inset-bottom)); }
 }

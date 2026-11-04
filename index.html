@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <!-- index.html : the STRUCTURE (skeleton) of the page -->
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8" />
-  <!-- This line makes the page fit phone screens -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Makes the page fit phone screens (viewport-fit lets it use the full screen on new phones) -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>Aks Me AI - Your AI Study Buddy</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="app">
+
+    <!-- Dark layer behind the menu on phones. Tap it to close the menu. -->
+    <div class="backdrop" id="backdrop"></div>
 
     <!-- ================= SIDEBAR (left) ================= -->
     <aside class="sidebar" id="sidebar">
@@ -25,11 +28,15 @@
         <button class="tool" data-mode="notes">📝 Study notes</button>
         <button class="tool" data-mode="quiz">❓ Quiz</button>
         <button class="tool" data-mode="flashcards">🃏 Flashcards</button>
+        <button class="tool" data-mode="exam">📚 Exam mode</button>
         <button class="tool" data-mode="planner">📅 Study planner</button>
         <button class="tool" data-mode="challenge">🧩 Coding challenge</button>
         <button class="tool" data-mode="interview">🎯 Interview questions</button>
         <button class="tool" data-mode="resume">📄 Resume guidance</button>
       </nav>
+
+      <p class="side-title">Recent chats</p>
+      <div class="chat-list" id="chatList"></div>
 
       <p class="side-foot">AI can make mistakes. Verify important facts with your textbook or teacher.</p>
     </aside>
@@ -38,21 +45,34 @@
     <main class="main">
       <header class="topbar">
         <!-- Hamburger button: only visible on phones -->
-        <button class="menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
-        <div>
+        <button class="icon-btn menu-btn" id="menuBtn" aria-label="Open menu">☰</button>
+
+        <div class="titles">
           <div class="mode-name" id="modeName">Ask anything</div>
           <div class="mode-hint" id="modeHint">Ask any study question</div>
         </div>
-        <!-- Language picker: only visible in Programming tutor mode -->
-        <select id="langSelect" class="lang hidden" aria-label="Programming language">
-          <option>Python</option>
-          <option>C</option>
-          <option>C++</option>
-          <option>Java</option>
-          <option>HTML</option>
-          <option>CSS</option>
-          <option>JavaScript</option>
-        </select>
+
+        <div class="controls">
+          <!-- Programming language picker: only visible in Programming tutor mode -->
+          <select id="langSelect" class="sel hidden" aria-label="Programming language">
+            <option>Python</option>
+            <option>C</option>
+            <option>C++</option>
+            <option>Java</option>
+            <option>HTML</option>
+            <option>CSS</option>
+            <option>JavaScript</option>
+          </select>
+          <!-- Marks picker: only visible in Exam mode -->
+          <select id="marksSelect" class="sel hidden" aria-label="Marks">
+            <option value="2">2 marks</option>
+            <option value="5">5 marks</option>
+            <option value="10">10 marks</option>
+          </select>
+          <button class="icon-btn" id="progressBtn" title="My progress" aria-label="My progress">📊</button>
+          <button class="icon-btn" id="settingsBtn" title="Study settings" aria-label="Study settings">⚙️</button>
+          <button class="icon-btn" id="themeBtn" title="Switch theme" aria-label="Switch theme">☀️</button>
+        </div>
       </header>
 
       <!-- All messages are added into this box by script.js -->
@@ -66,16 +86,97 @@
             <button class="chip" data-text="Difference between supervised and unsupervised learning">Supervised vs Unsupervised</button>
             <button class="chip" data-text="Explain pointers in C for a beginner">Pointers in C</button>
           </div>
+          <p class="tip">💡 Tip: tap ⚙️ to set your semester and subject, 📎 to attach a PDF, 🎤 to speak.</p>
         </div>
       </section>
 
+      <!-- Shows the file you attached (PDF / image) -->
+      <div class="attach-chip hidden" id="attachChip">
+        <span>📎 <span id="attachName"></span></span>
+        <button id="attachRemove" aria-label="Remove file">✕</button>
+      </div>
+
       <!-- Input bar at the bottom -->
       <footer class="composer">
+        <button class="icon-btn" id="attachBtn" title="Attach a PDF or image" aria-label="Attach a file">📎</button>
+        <input type="file" id="fileInput" accept="application/pdf,image/png,image/jpeg,image/webp" hidden />
+        <button class="icon-btn" id="micBtn" title="Speak your question" aria-label="Voice input">🎤</button>
         <textarea id="input" rows="1" placeholder="Type your question... (Enter to send, Shift+Enter for new line)"></textarea>
-        <button id="sendBtn" aria-label="Send">➤</button>
+        <button class="send" id="sendBtn" aria-label="Send">➤</button>
       </footer>
     </main>
   </div>
+
+  <!-- ================= STUDY SETTINGS POP-UP ================= -->
+  <dialog id="settingsDialog">
+    <h2>⚙️ Study settings</h2>
+    <p class="muted">The AI uses these to match answers to your syllabus.</p>
+
+    <label for="universityInput">University / course</label>
+    <input id="universityInput" type="text" maxlength="80" placeholder="e.g. JNTU B.Tech AI &amp; ML" />
+
+    <label for="semesterSelect">Semester</label>
+    <select id="semesterSelect">
+      <option value="">Not set</option>
+      <option value="1">Semester 1</option>
+      <option value="2">Semester 2</option>
+      <option value="3">Semester 3</option>
+      <option value="4">Semester 4</option>
+      <option value="5">Semester 5</option>
+      <option value="6">Semester 6</option>
+      <option value="7">Semester 7</option>
+      <option value="8">Semester 8</option>
+    </select>
+
+    <label for="subjectInput">Subject</label>
+    <!-- datalist = suggestions while typing, but you can still type anything -->
+    <input id="subjectInput" type="text" list="subjectList" maxlength="80" placeholder="Pick or type a subject" />
+    <datalist id="subjectList">
+      <option value="Programming in C"></option>
+      <option value="Python Programming"></option>
+      <option value="Data Structures"></option>
+      <option value="Object Oriented Programming (Java)"></option>
+      <option value="Discrete Mathematics"></option>
+      <option value="Linear Algebra"></option>
+      <option value="Probability and Statistics"></option>
+      <option value="Engineering Mathematics"></option>
+      <option value="Digital Logic Design"></option>
+      <option value="Database Management Systems"></option>
+      <option value="Operating Systems"></option>
+      <option value="Computer Networks"></option>
+      <option value="Design and Analysis of Algorithms"></option>
+      <option value="Artificial Intelligence"></option>
+      <option value="Machine Learning"></option>
+      <option value="Deep Learning"></option>
+      <option value="Natural Language Processing"></option>
+      <option value="Computer Vision"></option>
+    </datalist>
+
+    <label for="languageSelect">Answer language</label>
+    <select id="languageSelect">
+      <option>English</option>
+      <option>Hindi</option>
+      <option>Telugu</option>
+    </select>
+
+    <div class="dialog-actions">
+      <button class="btn ghost" id="settingsClose">Cancel</button>
+      <button class="btn primary" id="settingsSave">Save</button>
+    </div>
+  </dialog>
+
+  <!-- ================= PROGRESS POP-UP ================= -->
+  <dialog id="progressDialog">
+    <h2>📊 My progress</h2>
+    <div id="progressBody"></div>
+    <div class="dialog-actions">
+      <button class="btn ghost" id="progressReset">Reset progress</button>
+      <button class="btn primary" id="progressClose">Close</button>
+    </div>
+  </dialog>
+
+  <!-- Small message that pops up at the bottom (e.g. "Copied!") -->
+  <div class="toast" id="toast" role="status"></div>
 
   <script src="script.js"></script>
 </body>
