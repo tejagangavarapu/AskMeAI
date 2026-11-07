@@ -51,6 +51,40 @@ const MODES = {
   interview:  { name: 'Interview questions', hint: 'Prepare for interviews',               placeholder: 'Topic, e.g. "Machine Learning" or "Java OOP"' },
   resume:     { name: 'Resume guidance',     hint: 'Paste your resume or ask for tips',    placeholder: 'Ask for tips or paste your resume text...' },
 };
+
+// What the welcome screen shows for each tool: icon, title, text, example chips (label, question) and a tip
+const WELCOME = {
+  chat: { icon: '💬', title: "Hi! I'm Aks Me AI 👋", text: 'Your study buddy for programming, AI/ML, maths and engineering subjects.',
+    chips: [['Explain neural networks', 'Explain what a neural network is, step by step'], ['Python loops', 'Teach me loops in Python with examples'], ['Supervised vs Unsupervised', 'Difference between supervised and unsupervised learning'], ['Pointers in C', 'Explain pointers in C for a beginner']],
+    tip: '💡 Tip: tap ⚙️ to set your semester and subject, 📎 to attach a PDF, 🎤 to speak.' },
+  tutor: { icon: '👨‍💻', title: "Let's learn to code! 👨‍💻", text: 'Pick a language at the top, then type a topic. I will teach it from zero with commented examples.',
+    chips: [['Variables and data types', 'Variables and data types'], ['Loops', 'Loops'], ['Functions', 'Functions'], ['Arrays / lists', 'Arrays or lists']],
+    tip: '💡 Tip: the language picker is at the top: Python, C, C++, Java, HTML, CSS or JavaScript.' },
+  notes: { icon: '📝', title: 'Quick study notes 📝', text: 'Type a topic and get neat revision notes: key points, an example and a 5-line summary.',
+    chips: [['Linear regression', 'Linear regression'], ['Operating system basics', 'Operating system basics'], ['Normalization in DBMS', 'Normalization in DBMS'], ['Binary search tree', 'Binary search tree']],
+    tip: '💡 Tip: attach your PDF with 📎 and ask for notes from it.' },
+  quiz: { icon: '❓', title: 'Quiz time! ❓', text: 'Type a topic, tap the answers and see your score at the end.',
+    chips: [['Python lists', 'Python lists'], ['Machine Learning basics', 'Machine Learning basics'], ['Pointers in C', 'Pointers in C'], ['HTML and CSS', 'HTML and CSS']],
+    tip: '💡 Tip: your scores are saved in 📊 My progress.' },
+  flashcards: { icon: '🃏', title: 'Flashcards 🃏', text: 'Type a topic, then tap each card to flip it and memorise the answer.',
+    chips: [['Operating System basics', 'Operating System basics'], ['Python keywords', 'Python keywords'], ['Neural network terms', 'Neural network terms'], ['Computer networks', 'Computer networks']],
+    tip: '💡 Tip: tap a card to flip it.' },
+  exam: { icon: '📚', title: 'Exam mode 📚', text: 'Pick 2, 5 or 10 marks at the top, then type a topic to practise exam-style answers.',
+    chips: [['Normalization in DBMS', 'Normalization in DBMS'], ['Process scheduling in OS', 'Process scheduling in OS'], ['Types of machine learning', 'Types of machine learning'], ['OOP concepts in Java', 'OOP concepts in Java']],
+    tip: '💡 Tip: these are exam-style practice questions, not real past papers.' },
+  planner: { icon: '📅', title: 'Study planner 📅', text: 'Tell me the subject, the number of days and the hours per day. I will make a plan.',
+    chips: [['DBMS exam in 5 days', 'DBMS exam in 5 days, 3 hours per day'], ['Python in 7 days', 'Learn Python basics in 7 days, 2 hours per day'], ['Maths revision', 'Maths revision for 10 days, 2 hours per day'], ['Placement prep', 'Placement preparation for 30 days, 3 hours per day']],
+    tip: '💡 Tip: if you do not say the days or hours, I assume 7 days and 2 hours per day.' },
+  challenge: { icon: '🧩', title: 'Coding challenges 🧩', text: 'Get a problem, try it yourself, and ask for hints when you are stuck.',
+    chips: [['Strings', 'Strings'], ['Recursion', 'Recursion'], ['Arrays', 'Arrays'], ['Sorting', 'Sorting']],
+    tip: '💡 Tip: I will not give the full solution unless you ask for it.' },
+  interview: { icon: '🎯', title: 'Interview practice 🎯', text: 'Pick a topic and practise questions with short model answers.',
+    chips: [['Machine Learning', 'Machine Learning'], ['Java OOP', 'Java OOP'], ['Python', 'Python'], ['HR questions for freshers', 'HR questions for freshers']],
+    tip: '💡 Tip: say your answer out loud first, then compare it with the model answer.' },
+  resume: { icon: '📄', title: 'Resume guidance 📄', text: 'Ask for tips, or paste your resume text and I will review it.',
+    chips: [['Fresher resume tips', 'How do I write a good resume as a fresher engineering student?'], ['Projects for AI/ML', 'Which projects should I add to my resume for AI and ML?'], ['Write my summary', 'Help me write a resume summary'], ['Skills section tips', 'How should I write the skills section of my resume?']],
+    tip: '💡 Tip: remove your phone number and address before pasting your resume.' },
+};
 const JSON_MODES = ['quiz', 'flashcards'];  // these answers are JSON, shown as cards/quiz
 const LEARNING_MODES = ['tutor', 'notes', 'quiz', 'flashcards', 'exam', 'planner', 'challenge', 'interview'];
 
@@ -955,9 +989,25 @@ if (!SpeechRec) {
 }
 
 // ---------- 17. Switching tools, menu, keyboard ----------
+// Fill the welcome screen with the text and example chips of the chosen tool
+function renderWelcome(mode) {
+  const w = WELCOME[mode] || WELCOME.chat;
+  welcome.innerHTML =
+    '<h1>' + escapeHtml(w.title) + '</h1>' +
+    '<p>' + escapeHtml(w.text) + '</p>' +
+    '<div class="chips">' +
+    w.chips.map((c) => '<button class="chip" data-text="' + escapeHtml(c[1]) + '">' + escapeHtml(c[0]) + '</button>').join('') +
+    '</div>' +
+    '<p class="tip">' + escapeHtml(w.tip) + '</p>';
+}
+
 function setMode(mode) {
   currentMode = mode;
-  modeName.textContent = MODES[mode].name;
+  // Each tool has its own look: colours (CSS reads data-mode) and its own animated background
+  document.documentElement.dataset.mode = mode;
+  document.querySelectorAll('.scene[data-for]').forEach((sc) => sc.classList.toggle('on', sc.dataset.for === mode));
+  renderWelcome(mode);
+  modeName.textContent = (WELCOME[mode] ? WELCOME[mode].icon + ' ' : '') + MODES[mode].name;
   input.placeholder = MODES[mode].placeholder;
   langSelect.classList.toggle('hidden', mode !== 'tutor'); // language picker only for tutor
   marksSelect.classList.toggle('hidden', mode !== 'exam'); // marks picker only for exam mode
@@ -993,8 +1043,9 @@ input.addEventListener('keydown', (e) => {
 input.addEventListener('input', autoGrow);
 
 // Example question chips on the welcome screen
-document.querySelectorAll('.chip').forEach((chip) => {
-  chip.addEventListener('click', () => send(chip.dataset.text));
+welcome.addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip');
+  if (chip) send(chip.dataset.text);
 });
 
 menuBtn.addEventListener('click', () => toggleSidebar(!sidebar.classList.contains('open')));

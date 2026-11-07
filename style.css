@@ -25,6 +25,13 @@
   --bad: #e5594b;
   --bad-bg: #3a1d24;
   --shadow: rgba(0, 0, 0, 0.5);
+  /* colours of the night study-desk background */
+  --sky-top: #070a22; --sky-bottom: #1c2352;
+  --star-opacity: 1; --moon-opacity: 1; --sun-opacity: 0;
+  --skyline: #0e1438; --win-opacity: 0.85;
+  --wood-top: #4a3427; --wood-bottom: #271912;
+  --lamp-opacity: 1;
+  --glass: rgba(23, 26, 35, 0.72);
   color-scheme: dark;
 }
 
@@ -48,6 +55,13 @@
   --bad: #c62f20;
   --bad-bg: #fde8ea;
   --shadow: rgba(30, 40, 80, 0.25);
+  /* the same scene as a sunny morning */
+  --sky-top: #a9d4ff; --sky-bottom: #ffe9d2;
+  --star-opacity: 0; --moon-opacity: 0; --sun-opacity: 1;
+  --skyline: #b7c6e6; --win-opacity: 0;
+  --wood-top: #d2a678; --wood-bottom: #b08558;
+  --lamp-opacity: 0.18;
+  --glass: rgba(255, 255, 255, 0.72);
   color-scheme: light;
 }
 
@@ -306,6 +320,177 @@ dialog h3 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; 
   max-width: 90vw; text-align: center; box-shadow: 0 6px 20px var(--shadow);
 }
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ---------------- Night study-desk background ----------------
+   An SVG picture (the <div class="scene"> in index.html) sits behind the chat:
+   a night sky with twinkling stars, a moon, a shooting star and a city skyline,
+   plus a desk with a lamp, an open book whose page turns, a stack of books
+   with a steaming coffee cup, a swaying plant and a ticking clock.
+   In the light theme it turns into a sunny morning (sun, no stars, dim lamp).
+   All the movement is CSS, so no extra JavaScript is needed. */
+.main { position: relative; }
+.scene { position: absolute; inset: 0; z-index: 0; overflow: hidden; pointer-events: none; }
+.scene svg { display: block; width: 100%; height: 100%; }
+.main > :not(.scene) { position: relative; z-index: 1; }
+
+/* See-through top bar and message bar, so the picture shows behind them */
+.topbar, .composer {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+/* Colours that follow the theme (the values are at the top of this file) */
+.sky-top { stop-color: var(--sky-top); }
+.sky-bottom { stop-color: var(--sky-bottom); }
+.wood-top { stop-color: var(--wood-top); }
+.wood-bottom { stop-color: var(--wood-bottom); }
+.bldg { fill: var(--skyline); }
+.stars { opacity: var(--star-opacity); }
+.moon { opacity: var(--moon-opacity); }
+.sun { opacity: var(--sun-opacity); }
+.wins { opacity: var(--win-opacity); }
+.lamp-light { opacity: var(--lamp-opacity); }
+
+/* --- The animations --- */
+.star { fill: #fff; animation: twinkle 4s ease-in-out infinite; }
+@keyframes twinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+
+.halo { transform-origin: 600px 100px; animation: halo 7s ease-in-out infinite; }
+@keyframes halo { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.18); opacity: 0.65; } }
+
+.rays { transform-origin: 600px 100px; animation: spin 90s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.shoot { opacity: 0; animation: shoot 16s linear infinite; }
+@keyframes shoot {
+  0%   { transform: translate(120px, 30px); opacity: 0; }
+  2%   { opacity: 1; }
+  8%   { transform: translate(430px, 135px); opacity: 0; }
+  100% { transform: translate(430px, 135px); opacity: 0; }
+}
+
+.win { fill: #ffd98a; }
+.win.blink { animation: window-blink 7s steps(1, end) infinite; }
+@keyframes window-blink { 0%, 60% { opacity: 1; } 62%, 70% { opacity: 0.1; } 72%, 100% { opacity: 1; } }
+
+.pulse { animation: lamp-pulse 6s ease-in-out infinite; }
+@keyframes lamp-pulse { 0%, 100% { opacity: 1; } 45% { opacity: 0.88; } 50% { opacity: 1; } 53% { opacity: 0.78; } 56% { opacity: 1; } }
+
+.sway { transform-origin: 170px 424px; animation: sway 5s ease-in-out infinite alternate; }
+@keyframes sway { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+
+.hand-s { transform-origin: 830px 430px; animation: tick 60s linear infinite; }
+@keyframes tick { to { transform: rotate(360deg); } }
+
+.flip { transform-origin: 477px 455px; animation: flip 8s ease-in-out infinite; }
+@keyframes flip {
+  0%, 4% { transform: scaleX(1); opacity: 1; }
+  30%    { transform: scaleX(-1); opacity: 1; }
+  36%    { transform: scaleX(-1); opacity: 0; }
+  94%    { transform: scaleX(1); opacity: 0; }
+  100%   { transform: scaleX(1); opacity: 1; }
+}
+
+.steam { fill: none; stroke: rgba(255, 255, 255, 0.5); stroke-width: 2; stroke-linecap: round; opacity: 0.5; animation: steam 4s ease-in-out infinite; }
+@keyframes steam { 0% { opacity: 0; transform: translateY(6px); } 30% { opacity: 0.6; } 100% { opacity: 0; transform: translateY(-16px); } }
+
+.dust { fill: #ffe6a8; opacity: 0; animation: dust 9s ease-in-out infinite; }
+@keyframes dust { 0% { opacity: 0; transform: translate(0, 0); } 30% { opacity: 0.8; } 100% { opacity: 0; transform: translate(10px, -40px); } }
+
+/* Welcome panel over the picture: a soft see-through card keeps the text easy to read */
+.welcome {
+  padding: 22px 26px;
+  border-radius: 18px;
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+
+/* The studying boy: head nods, hand writes, eyes blink */
+.boy-head { transform-box: view-box; transform-origin: 730px 400px; animation: nod 3.2s ease-in-out infinite alternate; }
+@keyframes nod { from { transform: rotate(-2deg) translateY(0); } to { transform: rotate(3deg) translateY(2px); } }
+.boy-write { animation: write 0.9s ease-in-out infinite alternate; }
+@keyframes write { from { transform: translate(0, 0); } to { transform: translate(-7px, 1px); } }
+.boy-eyes { transform-box: fill-box; transform-origin: center; animation: boy-blink 4.5s infinite; }
+@keyframes boy-blink { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(0.1); } }
+
+/* ===================================================================
+   One animated background + one colour theme for EACH tool in the sidebar.
+   script.js puts the chosen tool on <html data-mode="..."> and marks the
+   matching .scene with the class "on".
+   =================================================================== */
+.scene[data-for] { transition: opacity 0.7s ease; }
+.scene:not(.on) { opacity: 0; visibility: hidden; transition: opacity 0.7s ease, visibility 0s 0.7s; }
+.scene:not(.on) * { animation-play-state: paused !important; }
+/* the scenes with a dark picture are brightened a little in light theme */
+:root[data-theme="light"] .scene[data-for]:not([data-for="chat"]) { filter: brightness(1.25) saturate(0.9); }
+
+/* Accent colours (buttons, active tool, borders) change with the tool */
+:root[data-mode="tutor"]      { --accent: #16a34a; --accent-2: #0d9488; }
+:root[data-mode="notes"]      { --accent: #d97706; --accent-2: #ea580c; }
+:root[data-mode="quiz"]       { --accent: #db2777; --accent-2: #9333ea; }
+:root[data-mode="flashcards"] { --accent: #0891b2; --accent-2: #0ea5e9; }
+:root[data-mode="exam"]       { --accent: #dc2626; --accent-2: #ea580c; }
+:root[data-mode="planner"]    { --accent: #2563eb; --accent-2: #4f46e5; }
+:root[data-mode="challenge"]  { --accent: #e11d9a; --accent-2: #f97316; }
+:root[data-mode="interview"]  { --accent: #4f46e5; --accent-2: #2563eb; }
+:root[data-mode="resume"]     { --accent: #0284c7; --accent-2: #14b8a6; }
+
+/* ---- shared animations (all names start with m-) ---- */
+.m-line { transform-box: fill-box; transform-origin: left center; animation: m-type 8s ease-out infinite; }
+@keyframes m-type { 0% { transform: scaleX(0); } 14%, 80% { transform: scaleX(1); } 94%, 100% { transform: scaleX(0); } }
+.m-cursor { animation: m-cursor 1s steps(1) infinite; }
+@keyframes m-cursor { 50% { opacity: 0; } }
+.m-rise { animation: m-rise 10s linear infinite; opacity: 0; }
+@keyframes m-rise { 0% { transform: translateY(0); opacity: 0; } 12% { opacity: 0.75; } 85% { opacity: 0.5; } 100% { transform: translateY(-600px); opacity: 0; } }
+.m-rain { animation: m-rain 9s linear infinite; opacity: 0; }
+@keyframes m-rain { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 0.4; } 100% { transform: translateY(620px); opacity: 0; } }
+.m-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: m-draw 9s ease-in-out infinite; }
+@keyframes m-draw { 0% { stroke-dashoffset: 1; opacity: 1; } 22%, 88% { stroke-dashoffset: 0; opacity: 1; } 96%, 100% { stroke-dashoffset: 0; opacity: 0; } }
+.m-hl { animation: m-hl 8s ease-in-out infinite; }
+@keyframes m-hl { 0%, 100% { opacity: 0; } 25%, 70% { opacity: 0.5; } }
+.m-wob { animation: m-wob 4s ease-in-out infinite alternate; }
+@keyframes m-wob { from { transform: rotate(-3deg); } to { transform: rotate(3deg); } }
+.m-pen { animation: m-pen 1.2s ease-in-out infinite alternate; }
+@keyframes m-pen { from { transform: translate(0, 0); } to { transform: translate(-16px, 6px); } }
+.m-beam { animation: m-beam 6s ease-in-out infinite alternate; }
+@keyframes m-beam { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
+.m-glow { opacity: 0; animation: m-glow 8s ease-in-out infinite; }
+@keyframes m-glow { 0% { opacity: 0; } 6%, 18% { opacity: 0.6; } 26%, 100% { opacity: 0; } }
+.m-fall { animation: m-fall 7s linear infinite; }
+@keyframes m-fall { 0% { transform: translateY(0) rotate(0deg); } 100% { transform: translateY(640px) rotate(540deg); } }
+.m-flip { transform-box: fill-box; transform-origin: center; animation: m-flip 7s ease-in-out infinite; }
+@keyframes m-flip { 0%, 36% { transform: scaleX(1); } 44% { transform: scaleX(0.03); } 52%, 82% { transform: scaleX(1); } 90% { transform: scaleX(0.03); } 98%, 100% { transform: scaleX(1); } }
+.m-front { animation: m-front 7s linear infinite; }
+@keyframes m-front { 0%, 43% { opacity: 1; } 45%, 89% { opacity: 0; } 91%, 100% { opacity: 1; } }
+.m-back { animation: m-back 7s linear infinite; }
+@keyframes m-back { 0%, 43% { opacity: 0; } 45%, 89% { opacity: 1; } 91%, 100% { opacity: 0; } }
+.m-spin { animation: m-spin 12s linear infinite; }
+@keyframes m-spin { to { transform: rotate(360deg); } }
+.m-stamp { transform-box: view-box; opacity: 0; animation: m-stamp 7s ease-out infinite; }
+@keyframes m-stamp { 0%, 50% { opacity: 0; transform: scale(2.4) rotate(-18deg); } 58% { opacity: 1; transform: scale(0.94) rotate(-12deg); } 62%, 90% { opacity: 1; transform: scale(1) rotate(-12deg); } 100% { opacity: 0; transform: scale(1) rotate(-12deg); } }
+.m-float { animation: m-float 5s ease-in-out infinite alternate; }
+@keyframes m-float { from { transform: translateY(-8px) rotate(-2deg); } to { transform: translateY(8px) rotate(2deg); } }
+.m-tick { stroke-dasharray: 1; stroke-dashoffset: 1; animation: m-tick 11s ease-out infinite; }
+@keyframes m-tick { 0% { stroke-dashoffset: 1; } 6%, 88% { stroke-dashoffset: 0; } 96%, 100% { stroke-dashoffset: 1; } }
+.m-tw { animation: m-tw 3s ease-in-out infinite; }
+@keyframes m-tw { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+.m-gridline { animation: m-grid 4s ease-in infinite; opacity: 0; }
+@keyframes m-grid { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 0.9; } 100% { transform: translateY(240px); opacity: 0.9; } }
+.m-pulse { animation: m-pulse 2.4s ease-in-out infinite; }
+@keyframes m-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12); } }
+.m-bob { animation: m-bob 3s ease-in-out infinite alternate; }
+@keyframes m-bob { from { transform: translateY(0); } to { transform: translateY(-5px); } }
+.m-bubble { opacity: 0; animation: m-bubble 10s ease-out infinite; }
+@keyframes m-bubble { 0%, 3% { opacity: 0; transform: scale(0.6); } 9%, 38% { opacity: 1; transform: scale(1); } 46%, 100% { opacity: 0; transform: scale(0.9); } }
+.m-scan { animation: m-scan 3.5s ease-in-out infinite; }
+@keyframes m-scan { 0% { transform: translateY(0); } 100% { transform: translateY(430px); } }
+
+/* People who turn off animations on their device get a still picture */
+@media (prefers-reduced-motion: reduce) {
+  .scene * { animation: none !important; }
+}
 
 /* ---------------- Phones & small tablets ---------------- */
 @media (max-width: 800px) {
