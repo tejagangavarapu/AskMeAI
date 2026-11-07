@@ -487,6 +487,27 @@ dialog h3 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; 
 .m-scan { animation: m-scan 3.5s ease-in-out infinite; }
 @keyframes m-scan { 0% { transform: translateY(0); } 100% { transform: translateY(430px); } }
 
+/* The welcome card sits in the top-left corner so the whole animated scene stays visible */
+.chat { align-items: flex-start; }
+.welcome {
+  margin: 0 auto auto 0; text-align: left; max-width: 330px; padding: 16px 18px;
+  animation: welcome-in 0.5s ease-out both;
+}
+@keyframes welcome-in { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: none; } }
+.welcome h1 { font-size: 1.35rem; margin-bottom: 6px; }
+.welcome p { font-size: 0.88rem; margin-bottom: 12px; }
+.welcome .tip { margin-top: 12px; font-size: 0.78rem; }
+.welcome .chips { justify-content: flex-start; gap: 6px; }
+.welcome .chip { padding: 6px 11px; font-size: 0.8rem; }
+/* chat messages should still use the full width */
+.chat .msg { align-self: stretch; }
+@media (max-width: 800px) {
+  .welcome { max-width: none; width: 100%; margin: 0 0 auto 0; padding: 12px 14px; }
+  .welcome h1 { font-size: 1.15rem; }
+  .welcome p { font-size: 0.82rem; margin-bottom: 8px; }
+  .welcome .tip { display: none; }
+}
+
 /* People who turn off animations on their device get a still picture */
 @media (prefers-reduced-motion: reduce) {
   .scene * { animation: none !important; }
