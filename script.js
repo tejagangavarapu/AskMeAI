@@ -110,7 +110,7 @@ function save(key, value) {
 
 // ---------- 4. App state (data that changes) ----------
 let settings = Object.assign(
-  { theme: 'dark', university: '', semester: '', subject: '', language: 'English', marks: '5', progLang: 'Python', voiceRate: '1', handsFree: true },
+  { theme: 'dark', university: '', semester: '', subject: '', language: 'English', marks: '5', progLang: 'Python', voiceRate: '1', handsFree: true, bargeIn: true },
   load(STORE.settings, {})
 );
 let chats = load(STORE.chats, []);
@@ -1046,6 +1046,7 @@ const voiceTitle = $('voiceTitle');
 const voiceLang = $('voiceLang');
 const voiceHands = $('voiceHands');
 const voiceSpeed = $('voiceSpeed');
+const voiceBarge = $('voiceBarge');
 
 let voiceOn = false;     // is the voice screen open?
 let vRec = null;         // the recogniser that is listening right now
@@ -1057,6 +1058,9 @@ let vDone = false;       // has the whole answer arrived?
 let ttsToken = 0;        // changes whenever we cancel speech, so old callbacks are ignored
 let reading = null;      // the 🔊 Listen button that is reading right now
 let warnedVoice = false;
+let vWatch = null;       // the recogniser that listens WHILE the AI is speaking (for interrupting)
+let vSpokenText = '';    // what the AI has said in this answer (to ignore its own voice)
+let vSeed = '';          // the first words you said while interrupting
 
 // ----- choosing a voice -----
 let ttsVoices = [];
@@ -1168,8 +1172,51 @@ function toggleReadAloud(text, btn) {
 function setVoiceState(state, status) {
   voiceOrb.dataset.state = state;
   voiceStatus.textContent = status;
+  if (state === 'speaking') startWatch(); else stopWatch();
+}
+
+// ----- interrupting: talk while the AI is speaking and it stops and listens -----
+const words = (s) => s.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, ' ').split(/\s+/).filter(Boolean);
+function isInterruption(heard) {
+  const spoken = new Set(words(vSpokenText));
+  const mine = words(heard).filter((w) => !spoken.has(w));   // words the AI did not just say = you
+  return mine.length >= 2 || /\b(stop|wait|pause|hold on)\b/i.test(heard);
+}
+function stopWatch() {
+  if (!vWatch) return;
+  const r = vWatch; vWatch = null;
+  try { r.abort(); } catch { /* ignore */ }
+}
+function startWatch() {
+  if (!settings.bargeIn || !voiceOn || vWatch || !SpeechRec) return;
+  const rec = new SpeechRec();
+  vWatch = rec;
+  rec.lang = VOICE_LANGS[settings.language] || 'en-IN';
+  rec.interimResults = true;
+  rec.continuous = true;
+  rec.onresult = (e) => {
+    if (vWatch !== rec || voiceOrb.dataset.state !== 'speaking') return;
+    let t = '';
+    for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+    if (isInterruption(t)) bargeIn(t.trim());
+  };
+  rec.onerror = () => { /* ignore: no-speech, aborted... the orb still works */ };
+  rec.onend = () => {
+    if (vWatch !== rec) return;
+    vWatch = null;
+    if (voiceOn && voiceOrb.dataset.state === 'speaking') setTimeout(startWatch, 200); // keep listening
+  };
+  try { rec.start(); } catch { vWatch = null; }
+}
+function bargeIn(heard) {
+  vSeed = heard;
+  stopWatch();
+  cancelSpeech();
+  if (isLoading) { if (voiceSession) voiceSession.interrupted = true; stopGenerating(); }
+  else startListening();
 }
 function refreshVoiceChips() {
+  voiceBarge.textContent = 'Interrupt: ' + (settings.bargeIn ? 'on' : 'off');
   voiceHands.textContent = 'Hands-free: ' + (settings.handsFree ? 'on' : 'off');
   voiceSpeed.textContent = 'Speed ' + (Number(settings.voiceRate) || 1) + '×';
 }
@@ -1186,8 +1233,9 @@ function startListening() {
   if (!voiceOn) return;
   if (isLoading) { setTimeout(startListening, 250); return; } // wait until the last answer is fully finished
   cancelSpeech();
-  vHeard = '';
-  voiceYou.textContent = '';
+  const seed = vSeed; vSeed = '';
+  vHeard = seed;
+  voiceYou.textContent = seed ? '🎤 ' + seed : '';
   setVoiceState('listening', 'Listening…');
   const rec = new SpeechRec();
   vRec = rec;
@@ -1198,6 +1246,7 @@ function startListening() {
   rec.onresult = (e) => {
     let t = '';
     for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+    if (seed) t = seed + ' ' + t;
     vHeard = t;
     voiceYou.textContent = '🎤 ' + t;
   };
@@ -1222,7 +1271,7 @@ function startListening() {
 }
 
 function submitVoice(text) {
-  vSilent = 0; vSpokenLen = 0; vPending = 0; vDone = false;
+  vSilent = 0; vSpokenLen = 0; vPending = 0; vDone = false; vSpokenText = '';
   voiceYou.textContent = '🗣 ' + text;
   voiceAI.textContent = '';
   setVoiceState('thinking', 'Thinking…');
@@ -1259,6 +1308,7 @@ function openVoice() {
         vSpokenLen += cut;
         rest.slice(0, cut).split(/\n+/).flatMap(pieces).filter((x) => /[\p{L}\p{N}]/u.test(x)).forEach((sentence) => {
           vPending++;
+          vSpokenText += ' ' + sentence;
           setVoiceState('speaking', 'Speaking… tap the orb to interrupt');
           speakText(sentence, () => { vPending--; maybeFinish(); });
         });
@@ -1298,6 +1348,7 @@ function closeVoice() {
   if (!voiceOn) return;
   voiceOn = false;
   voiceSession = null;
+  stopWatch();
   if (vRec) { const r = vRec; vRec = null; try { r.abort(); } catch { /* ignore */ } }
   cancelSpeech();
   if (isLoading && abortController) abortController.abort();
@@ -1321,6 +1372,7 @@ voiceOrb.addEventListener('click', () => {
     startListening();
   }
 });
+voiceBarge.addEventListener('click', () => { settings.bargeIn = !settings.bargeIn; saveSettings(); refreshVoiceChips(); if (!settings.bargeIn) stopWatch(); else if (voiceOrb.dataset.state === 'speaking') startWatch(); });
 voiceHands.addEventListener('click', () => { settings.handsFree = !settings.handsFree; saveSettings(); refreshVoiceChips(); });
 voiceSpeed.addEventListener('click', () => {
   const i = VOICE_SPEEDS.indexOf(Number(settings.voiceRate) || 1);

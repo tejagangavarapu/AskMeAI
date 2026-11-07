@@ -116,7 +116,8 @@ Tap the **🎧** button next to the message box.
 
 - Speak your question, the AI answers **out loud** sentence by sentence while it is still writing, then listens again (hands-free).
 - Tap the glowing orb: while listening = send what you said, while speaking = interrupt and talk, while thinking = stop.
-- Chips on the screen: **Hands-free** on/off, **speed** (0.85x to 1.3x), and **language**.
+- **Interrupt anytime:** while the AI is talking, just start speaking. It stops and listens to you. (Headphones work best; on loud speakers the mic can hear the AI. Turn the **Interrupt** chip off if that happens, you can still tap the orb.)
+- Chips on the screen: **Hands-free** on/off, **Interrupt** on/off, **speed** (0.85x to 1.3x), and **language**.
 - Every answer also has a **🔊 Listen** button to read it aloud.
 - Spoken answers are short and plain (no tables or emojis); code is shown on screen only.
 - Works in Chrome, Edge and Safari, needs internet and microphone permission. Hindi/Telugu voices depend on voices installed on your device.
