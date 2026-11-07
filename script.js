@@ -123,7 +123,9 @@ let currentId = null;     // id of the chat on screen (null = a new, empty chat)
 let currentMode = 'chat'; // which tool is selected
 let isLoading = false;    // true while waiting for an answer
 let abortController = null; // lets us cancel a request (Stop button)
-let attachment = null;    // the attached file: { name, mimeType, data }
+let attachment = null;    // the file waiting in the message box: { name, mimeType, data }
+// The file that went with each sent message (kept only while the page is open, never saved to localStorage)
+const sentFiles = new WeakMap();
 let recognition = null;   // the voice recogniser
 let listening = false;
 
@@ -143,6 +145,13 @@ function toast(text) { // small message at the bottom of the screen
 // Make text safe. Prevents HTML injection (XSS): "<b>" becomes plain text.
 function escapeHtml(text) {
   return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// Every tool has its OWN chats. A chat belongs to the tool it was started in.
+function toolOf(chat) {
+  if (chat.tool && MODES[chat.tool]) return chat.tool;
+  const first = chat.messages.find((m) => m.role === 'user' && MODES[m.mode]);
+  return first ? first.mode : 'chat';
 }
 
 function currentChat() {
@@ -591,18 +600,21 @@ function showError(row, bubble, message) {
 // ---------- 12. Saved chats list (sidebar) ----------
 function persistChats() {
   chats.sort((a, b) => b.updated - a.updated);
-  chats = chats.slice(0, 30); // keep the 30 newest
+  chats = chats.slice(0, 60); // keep the 60 newest
   saveChats();
   renderChatList();
 }
 
 function renderChatList() {
   chatList.innerHTML = '';
-  if (!chats.length) {
-    chatList.innerHTML = '<p class="empty">No saved chats yet</p>';
+  const mine = chats.filter((c) => toolOf(c) === currentMode); // only this tool's chats
+  const title = $('chatListTitle');
+  if (title) title.textContent = 'Recent chats · ' + MODES[currentMode].name;
+  if (!mine.length) {
+    chatList.innerHTML = '<p class="empty">No chats in this tool yet</p>';
     return;
   }
-  chats.forEach((c) => {
+  mine.forEach((c) => {
     const item = document.createElement('div');
     item.className = 'chat-item' + (c.id === currentId ? ' active' : '');
     const open = document.createElement('button');
@@ -635,9 +647,8 @@ function openChat(id) {
   if (!chat) return;
   currentId = id;
   clearAttachment();
-  // continue in the same tool the chat was using
-  const lastUser = chat.messages.slice().reverse().find((m) => m.role === 'user');
-  setMode(lastUser && MODES[lastUser.mode] ? lastUser.mode : 'chat');
+  // open the chat in the tool it belongs to
+  setMode(toolOf(chat));
   renderChat();
   renderChatList();
   toggleSidebar(false);
@@ -654,12 +665,24 @@ function newChatView() {
   stopIfLoading();
   currentId = null;
   clearAttachment();
-  setMode('chat');
+  // a new chat starts empty, in the tool you are using now
+  setMode(currentMode);
   renderChat();
   renderChatList();
   toggleSidebar(false);
 }
 newChatBtn.addEventListener('click', newChatView);
+
+// Click a tool: show THAT tool's latest chat (or an empty one if it has none yet)
+function switchTool(mode) {
+  stopIfLoading();
+  const last = chats.find((c) => toolOf(c) === mode); // chats are sorted newest first
+  currentId = last ? last.id : null;
+  setMode(mode); // (an attached file stays attached)
+  renderChat();
+  renderChatList();
+  toggleSidebar(false);
+}
 
 // ---------- 13. Talking to the server ----------
 // Messages that are saved as pairs (question + answer) become the AI's memory.
@@ -693,7 +716,7 @@ function buildPayload(userMsg, messages, index) {
     marks: Number(settings.marks),        // exam mode
     answerLanguage: settings.language,    // English / Hindi / Telugu
     context: { university: settings.university, semester: settings.semester, subject: settings.subject },
-    attachment: attachment ? { name: attachment.name, mimeType: attachment.mimeType, data: attachment.data } : undefined,
+    attachment: sentFiles.has(userMsg) ? (({ name, mimeType, data }) => ({ name, mimeType, data }))(sentFiles.get(userMsg)) : undefined,
   });
 }
 
@@ -832,12 +855,15 @@ async function send(rawText, opts = {}) {
   // Make a new saved chat the first time you send something
   let chat = currentChat();
   if (!chat) {
-    chat = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title: text.slice(0, 40), messages: [], updated: Date.now() };
+    chat = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title: text.slice(0, 40), tool: currentMode, messages: [], updated: Date.now() };
     chats.unshift(chat);
     currentId = chat.id;
   }
 
-  chat.messages.push({ role: 'user', text, mode, attachName: attachment ? attachment.name : undefined });
+  const userMsg = { role: 'user', text, mode, attachName: attachment ? attachment.name : undefined };
+  if (attachment) sentFiles.set(userMsg, attachment); // the file travels with THIS message
+  chat.messages.push(userMsg);
+  clearAttachment();                                   // and leaves the message box right away
   chat.updated = Date.now();
   persistChats();
   if (!opts.followUp) recordActivity(mode, text);
@@ -857,6 +883,8 @@ function regenerate(index) {
   const chat = currentChat();
   if (!chat || !chat.messages[index] || index < 1) return;
   chat.messages.length = index; // now the last message is the student's question
+  const q = chat.messages[index - 1];
+  if (q && q.attachName && !sentFiles.has(q)) toast('The file is not in memory any more (the page was reloaded). Attach it again to include it.');
   saveChats();
   renderChat();
   generate();
@@ -925,7 +953,7 @@ fileInput.addEventListener('change', () => {
     // reader.result looks like "data:application/pdf;base64,AAAA..." - we keep the part after the comma
     attachment = { name: file.name, mimeType: file.type, data: String(reader.result).split(',')[1] };
     showAttachment();
-    toast('Attached ✅ Ask a question about it. Press ✕ when you are done with it.');
+    toast('Attached ✅ Now type your question and press Send. The file goes with that message.');
   };
   reader.onerror = () => toast('Could not read that file.');
   reader.readAsDataURL(file);
@@ -1024,8 +1052,7 @@ function toggleSidebar(open) { // phones: slide the menu in/out
 
 document.querySelectorAll('.tool').forEach((btn) => {
   btn.addEventListener('click', () => {
-    setMode(btn.dataset.mode);
-    toggleSidebar(false);
+    switchTool(btn.dataset.mode);
     input.focus();
   });
 });
