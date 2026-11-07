@@ -23,15 +23,20 @@ const path = require('path');
 
 // 3. Read settings from .env (with safe defaults)
 const PORT = process.env.PORT || 3000;
-const API_KEY = process.env.GEMINI_API_KEY;
+// Give ONE key in GEMINI_API_KEY, or SEVERAL separated by commas in GEMINI_API_KEYS:
+//   GEMINI_API_KEYS=key1,key2,key3,key4
+const API_KEYS = (process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || '')
+  .split(',')
+  .map((k) => k.trim())
+  .filter((k) => k && !k.includes('PASTE_YOUR'));
 // gemini-3.5-flash-lite = fast and free-tier friendly.
 const MODEL = process.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 // Base address of the Gemini API (only change this for testing)
 const GEMINI_BASE = process.env.GEMINI_BASE_URL || 'https://generativelanguage.googleapis.com/v1beta';
 const TIMEOUT_MS = 60 * 1000; // give up after 60 seconds
 
-if (!API_KEY || API_KEY.includes('PASTE_YOUR')) {
-  console.error('\n❌ GEMINI_API_KEY is missing. Open the .env file and paste your key.\n');
+if (API_KEYS.length === 0) {
+  console.error('\n❌ No API key found. Open the .env file and set GEMINI_API_KEY (or GEMINI_API_KEYS with keys separated by commas).\n');
   process.exit(1);
 }
 
@@ -220,8 +225,8 @@ function prepareRequest(reqBody) {
 // Helper 2: turn a Gemini error code into a friendly message
 function friendlyError(status) {
   if (status === 429) return 'AI usage limit reached. Please wait a minute and try again.';
-  if (status === 401 || status === 403) return 'The API key was rejected. Check GEMINI_API_KEY.';
-  if (status === 400) return 'AI request was rejected. Check your API key in the server settings.';
+  if (status === 401 || status === 403) return 'The API keys were rejected. Check GEMINI_API_KEY / GEMINI_API_KEYS in the server settings.';
+  if (status === 400) return 'AI request was rejected. Check your API keys in the server settings.';
   if (status === 404) return 'AI model not found. Check GEMINI_MODEL in the server settings.';
   if (status === 500 || status === 503) return 'The AI service is busy right now. Please try again in a moment.';
   return 'The AI service had a problem. Please try again.';
@@ -232,10 +237,72 @@ function extractText(data) {
   return data?.candidates?.[0]?.content?.parts?.map((p) => p.text || '').join('') || '';
 }
 
-const geminiHeaders = {
-  'Content-Type': 'application/json',
-  'x-goog-api-key': API_KEY, // key stays on the server, never sent to the browser
-};
+// ---------------------------------------------------------------------
+// API key manager
+// Spreads requests over all your keys (round-robin). If a key runs out of
+// quota (429) or is rejected (401/403), it is "rested" for a while and the
+// request is quietly retried with the next key.
+// Keys stay on the server: they are never sent to the browser or printed.
+// ---------------------------------------------------------------------
+const keyRestUntil = API_KEYS.map(() => 0); // until when (in ms) each key is skipped
+let nextKey = 0;                             // which key the next request starts with
+
+// The order in which to try the keys for ONE request
+function keyOrder() {
+  const n = API_KEYS.length;
+  const all = [];
+  for (let i = 0; i < n; i++) all.push((nextKey + i) % n);
+  nextKey = (nextKey + 1) % n; // the next request starts with the next key
+  const now = Date.now();
+  const healthy = all.filter((k) => keyRestUntil[k] <= now);
+  // If every key is resting, try them all anyway (the limit may have reset)
+  return healthy.length ? healthy : all;
+}
+
+// Send one request to Gemini. Wrong model names and similar problems are
+// returned straight away, because another key would not fix them.
+async function callGemini(url, bodyObject, signal) {
+  const order = keyOrder();
+  let response;
+  for (let i = 0; i < order.length; i++) {
+    const k = order[i];
+    response = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': API_KEYS[k] },
+      body: JSON.stringify(bodyObject),
+      signal,
+    });
+    if (response.ok) return response;
+
+    // Decide: is it a problem with THIS key (try the next one) or something else?
+    let tryNext = false;
+    if (response.status === 429) {
+      keyRestUntil[k] = Date.now() + 60 * 1000;
+      console.warn(`Key #${k + 1} is out of quota (429). Resting it for 1 minute.`);
+      tryNext = true;
+    } else if (response.status === 401 || response.status === 403) {
+      keyRestUntil[k] = Date.now() + 10 * 60 * 1000;
+      console.warn(`Key #${k + 1} was rejected (${response.status}). Resting it for 10 minutes.`);
+      tryNext = true;
+    } else if (response.status === 400) {
+      // An invalid key comes back as 400 "API key not valid"
+      const info = await response.clone().json().catch(() => ({}));
+      if (/api key/i.test(info?.error?.message || '')) {
+        keyRestUntil[k] = Date.now() + 10 * 60 * 1000;
+        console.warn(`Key #${k + 1} is not valid. Resting it for 10 minutes.`);
+        tryNext = true;
+      }
+    } else if (response.status === 500 || response.status === 503) {
+      console.warn(`Gemini was busy (${response.status}) on key #${k + 1}.`);
+      tryNext = true;
+    }
+
+    const isLast = i === order.length - 1;
+    if (!tryNext || isLast) return response; // the caller turns this into a friendly message
+    try { await response.arrayBuffer(); } catch { /* free the connection */ }
+  }
+  return response;
+}
 
 // ---------------------------------------------------------------------
 // POST /api/chat-stream  -  FAST: sends the answer word by word
@@ -252,12 +319,7 @@ app.post('/api/chat-stream', chatLimiter, readJson, async (req, res) => {
 
   try {
     const url = `${GEMINI_BASE}/models/${MODEL}:streamGenerateContent?alt=sse`;
-    const geminiRes = await fetch(url, {
-      method: 'POST',
-      headers: geminiHeaders,
-      body: JSON.stringify(prepared.body),
-      signal: controller.signal,
-    });
+    const geminiRes = await callGemini(url, prepared.body, controller.signal);
 
     if (!geminiRes.ok) {
       const data = await geminiRes.json().catch(() => ({}));
@@ -331,12 +393,7 @@ app.post('/api/chat', chatLimiter, readJson, async (req, res) => {
   res.on('close', () => controller.abort());
 
   try {
-    const geminiRes = await fetch(`${GEMINI_BASE}/models/${MODEL}:generateContent`, {
-      method: 'POST',
-      headers: geminiHeaders,
-      body: JSON.stringify(prepared.body),
-      signal: controller.signal,
-    });
+    const geminiRes = await callGemini(`${GEMINI_BASE}/models/${MODEL}:generateContent`, prepared.body, controller.signal);
     const data = await geminiRes.json();
 
     if (!geminiRes.ok) {
@@ -366,9 +423,7 @@ app.post('/api/chat', chatLimiter, readJson, async (req, res) => {
 app.use((req, res) => res.status(404).send('Not found'));
 
 // Error handler: for example, a file that is too big for the 8 MB limit
-// (Express recognises an error handler by its 4 parameters.)
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
+ app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   const tooBig = err && err.type === 'entity.too.large';
   res.status(tooBig ? 413 : 400).json({
@@ -377,5 +432,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Aks Me AI is running at http://localhost:${PORT}  (model: ${MODEL})`);
+  console.log(`✅ Aks Me AI is running at http://localhost:${PORT}  (model: ${MODEL}, API keys loaded: ${API_KEYS.length})`);
 });
