@@ -110,7 +110,7 @@ function save(key, value) {
 
 // ---------- 4. App state (data that changes) ----------
 let settings = Object.assign(
-  { theme: 'dark', university: '', semester: '', subject: '', language: 'English', marks: '5', progLang: 'Python' },
+  { theme: 'dark', university: '', semester: '', subject: '', language: 'English', marks: '5', progLang: 'Python', voiceRate: '1', handsFree: true },
   load(STORE.settings, {})
 );
 let chats = load(STORE.chats, []);
@@ -126,6 +126,8 @@ let abortController = null; // lets us cancel a request (Stop button)
 let attachment = null;    // the file waiting in the message box: { name, mimeType, data }
 // The file that went with each sent message (kept only while the page is open, never saved to localStorage)
 const sentFiles = new WeakMap();
+const voiceMsgs = new WeakMap();   // which questions were SPOKEN (they get short spoken answers)
+let voiceSession = null;           // exists only while the voice screen is open
 let recognition = null;   // the voice recogniser
 let listening = false;
 
@@ -522,6 +524,7 @@ function buildActions(msg, isLast) {
   };
   if (msg.kind === 'text') {
     if (msg.text) add('📋 Copy', 'copy');
+    if (msg.text && window.speechSynthesis) add('🔊 Listen', 'listen');
     if (isLast) {
       add('🔄 Regenerate', 'regen');
       if (msg.text) {
@@ -639,7 +642,7 @@ chatList.addEventListener('click', (e) => {
   if (open) openChat(open.dataset.id);
 });
 
-function stopIfLoading() { if (isLoading && abortController) abortController.abort(); }
+function stopIfLoading() { stopReading(); if (isLoading && abortController) abortController.abort(); }
 
 function openChat(id) {
   stopIfLoading();
@@ -712,6 +715,7 @@ function buildPayload(userMsg, messages, index) {
     message: userMsg.text,
     history: buildHistory(messages, index),
     mode: userMsg.mode,
+    voice: voiceMsgs.has(userMsg) ? true : undefined, // spoken question -> short spoken answer
     language: settings.progLang,          // programming language (tutor mode)
     marks: Number(settings.marks),        // exam mode
     answerLanguage: settings.language,    // English / Hindi / Telugu
@@ -765,6 +769,7 @@ async function streamAnswer(payload, bubble, signal, partial) {
     const { done, value } = await reader.read();
     if (done) break;
     partial.text += decoder.decode(value, { stream: true });
+    if (voiceSession) voiceSession.onText(partial.text, false); // voice mode speaks it as it arrives
     if (!drawScheduled) {
       drawScheduled = true;
       requestAnimationFrame(draw);
@@ -772,6 +777,7 @@ async function streamAnswer(payload, bubble, signal, partial) {
   }
   partial.text += decoder.decode(); // flush leftover bytes
   draw();
+  if (voiceSession) voiceSession.onText(partial.text, true);
   return partial.text;
 }
 
@@ -818,6 +824,7 @@ async function generate() {
     chat.updated = Date.now();
     persistChats();
   } catch (err) {
+    if (voiceSession) voiceSession.onFail(err);
     if (err.name === 'AbortError') {
       // You pressed Stop: keep whatever text had arrived
       chat.messages.push({
@@ -861,6 +868,7 @@ async function send(rawText, opts = {}) {
   }
 
   const userMsg = { role: 'user', text, mode, attachName: attachment ? attachment.name : undefined };
+  if (opts.voice) voiceMsgs.set(userMsg, true);
   if (attachment) sentFiles.set(userMsg, attachment); // the file travels with THIS message
   chat.messages.push(userMsg);
   clearAttachment();                                   // and leaves the message box right away
@@ -928,6 +936,7 @@ chatBox.addEventListener('click', async (e) => {
   if (!msg) return;
 
   if (action === 'copy') return copyText(msg.text, btn);
+  if (action === 'listen') return toggleReadAloud(msg.text, btn);
   if (isLoading) return toast('Please wait, or press ■ to stop first.');
 
   if (action === 'regen') regenerate(Number(row.dataset.index));
@@ -1015,6 +1024,323 @@ if (!SpeechRec) {
     try { recognition.start(); } catch { /* already running */ }
   });
 }
+
+
+// ---------- 19. Voice conversation (talk to the AI and hear the answer) ----------
+// Like the voice mode of other assistants:  you speak -> the AI thinks -> it speaks back
+// sentence by sentence while the answer is still arriving -> it listens again.
+// It uses two free features that are built into the browser:
+//   SpeechRecognition (speech -> text)   and   speechSynthesis (text -> speech).
+const synth = window.speechSynthesis;
+const TTS_LANGS = { English: 'en-IN', Hindi: 'hi-IN', Telugu: 'te-IN' };
+const VOICE_SPEEDS = [0.85, 1, 1.15, 1.3];
+const voiceSupported = !!(SpeechRec && synth);
+
+const voiceOverlay = $('voiceOverlay');
+const voiceBtn = $('voiceBtn');
+const voiceOrb = $('voiceOrb');
+const voiceStatus = $('voiceStatus');
+const voiceYou = $('voiceYou');
+const voiceAI = $('voiceAI');
+const voiceTitle = $('voiceTitle');
+const voiceLang = $('voiceLang');
+const voiceHands = $('voiceHands');
+const voiceSpeed = $('voiceSpeed');
+
+let voiceOn = false;     // is the voice screen open?
+let vRec = null;         // the recogniser that is listening right now
+let vHeard = '';         // what you said
+let vSilent = 0;         // how many times in a row nobody spoke
+let vSpokenLen = 0;      // how much of the answer has already been given to the speaker
+let vPending = 0;        // sentences waiting to be spoken
+let vDone = false;       // has the whole answer arrived?
+let ttsToken = 0;        // changes whenever we cancel speech, so old callbacks are ignored
+let reading = null;      // the 🔊 Listen button that is reading right now
+let warnedVoice = false;
+
+// ----- choosing a voice -----
+let ttsVoices = [];
+if (synth) {
+  const loadVoices = () => { ttsVoices = synth.getVoices(); };
+  loadVoices();
+  synth.onvoiceschanged = loadVoices; // the list loads a moment after the page
+}
+function pickVoice(lang) {
+  const want = lang.toLowerCase();
+  const exact = ttsVoices.filter((v) => v.lang.replace('_', '-').toLowerCase() === want);
+  const same = ttsVoices.filter((v) => v.lang.toLowerCase().startsWith(want.slice(0, 2)));
+  const pool = exact.length ? exact : same;
+  return pool.find((v) => /natural|neural|google/i.test(v.name)) || pool[0] || null;
+}
+
+// ----- turning an answer into clean spoken text -----
+function speakable(md) {
+  let seenCode = false;
+  let t = md.replace(/```[\s\S]*?(?:```|$)/g, () => {      // code is not read out
+    if (seenCode) return ' ';
+    seenCode = true;
+    return ' The code is shown on the screen. ';
+  });
+  t = t
+    .replace(/`([^`]*)`/g, '$1')
+    .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/https?:\/\/\S+/g, ' link ')
+    .replace(/^\s{0,3}#{1,6}\s*/gm, '')
+    .replace(/^\s*[-*+]\s+/gm, '')
+    .replace(/^\s*\d+[.)]\s+/gm, '')
+    .replace(/[*_~|>]+/g, ' ')
+    .replace(/\p{Extended_Pictographic}|️/gu, '')
+    .replace(/[ \t]+/g, ' ');
+  return t;
+}
+
+// Position just after the last COMPLETE sentence in the text (0 if none yet)
+function lastBoundary(text) {
+  const re = /[.!?।॥]+["')\]]*\s|\n+/g;
+  let cut = 0, m;
+  while ((m = re.exec(text))) cut = m.index + m[0].length;
+  return cut;
+}
+
+// Cut very long sentences into pieces (browsers stop long speech after about 15 seconds)
+function pieces(sentence) {
+  const out = [];
+  let rest = sentence.trim();
+  while (rest.length > 220) {
+    let at = rest.lastIndexOf(',', 200);
+    if (at < 60) at = rest.lastIndexOf(' ', 200);
+    if (at < 60) at = 200;
+    out.push(rest.slice(0, at + 1));
+    rest = rest.slice(at + 1).trim();
+  }
+  if (rest) out.push(rest);
+  return out;
+}
+
+function speakText(text, onEnd) {
+  const token = ttsToken;
+  const u = new SpeechSynthesisUtterance(text);
+  const lang = TTS_LANGS[settings.language] || 'en-IN';
+  u.lang = lang;
+  const v = pickVoice(lang);
+  if (v) u.voice = v;
+  else if (!warnedVoice && lang !== 'en-IN') {
+    warnedVoice = true;
+    toast('No ' + settings.language + ' voice found on this device, so you may hear a different voice. Try Chrome or Edge.');
+  }
+  u.rate = Number(settings.voiceRate) || 1;
+  let finished = false;
+  const done = () => { if (finished) return; finished = true; if (token === ttsToken && onEnd) onEnd(); };
+  u.onend = done;
+  u.onerror = done;
+  synth.speak(u);
+}
+
+function cancelSpeech() {
+  ttsToken++;
+  vPending = 0;
+  if (synth) synth.cancel();
+}
+
+// ----- 🔊 Listen button under every answer -----
+function stopReading() {
+  if (!reading) return;
+  reading.btn.classList.remove('speaking');
+  reading.btn.textContent = '🔊 Listen';
+  reading = null;
+  cancelSpeech();
+}
+function toggleReadAloud(text, btn) {
+  if (!synth) return toast('Your browser cannot read aloud.');
+  if (reading && reading.btn === btn) return stopReading();
+  stopReading();
+  if (voiceOn) return;
+  const sentences = speakable(text).split(/\n+/).flatMap(pieces).filter((x) => /[\p{L}\p{N}]/u.test(x));
+  if (!sentences.length) return;
+  reading = { btn };
+  btn.classList.add('speaking');
+  btn.textContent = '⏹ Stop';
+  let left = sentences.length;
+  sentences.forEach((sentence) => speakText(sentence, () => { if (--left === 0) stopReading(); }));
+}
+
+// ----- the voice screen -----
+function setVoiceState(state, status) {
+  voiceOrb.dataset.state = state;
+  voiceStatus.textContent = status;
+}
+function refreshVoiceChips() {
+  voiceHands.textContent = 'Hands-free: ' + (settings.handsFree ? 'on' : 'off');
+  voiceSpeed.textContent = 'Speed ' + (Number(settings.voiceRate) || 1) + '×';
+}
+
+function micErrorText(code) {
+  if (code === 'not-allowed' || code === 'service-not-allowed') return 'Microphone is blocked. Allow it in your browser settings.';
+  if (code === 'network') return 'Voice needs a working internet connection. Turn off any VPN or use Chrome.';
+  if (code === 'audio-capture') return 'No microphone found.';
+  if (code === 'language-not-supported') return 'This browser cannot recognise this language. Try English.';
+  return 'Voice error: ' + code;
+}
+
+function startListening() {
+  if (!voiceOn) return;
+  if (isLoading) { setTimeout(startListening, 250); return; } // wait until the last answer is fully finished
+  cancelSpeech();
+  vHeard = '';
+  voiceYou.textContent = '';
+  setVoiceState('listening', 'Listening…');
+  const rec = new SpeechRec();
+  vRec = rec;
+  rec.lang = VOICE_LANGS[settings.language] || 'en-IN';
+  rec.interimResults = true;   // show your words while you speak
+  rec.continuous = false;      // stop when you pause
+  let fatal = false;
+  rec.onresult = (e) => {
+    let t = '';
+    for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+    vHeard = t;
+    voiceYou.textContent = '🎤 ' + t;
+  };
+  rec.onerror = (e) => {
+    if (e.error === 'no-speech' || e.error === 'aborted') return;
+    fatal = true;
+    setVoiceState('paused', micErrorText(e.error));
+  };
+  rec.onend = () => {
+    if (vRec !== rec) return;           // an old recogniser, ignore
+    vRec = null;
+    if (!voiceOn || fatal) return;
+    if (vHeard.trim()) return submitVoice(vHeard.trim());
+    if (rec.manualStop) return setVoiceState('paused', 'Tap the orb to talk');
+    if (++vSilent >= 3) {               // nobody spoke 3 times: wait for a tap
+      vSilent = 0;
+      return setVoiceState('paused', 'I did not hear anything. Tap the orb to talk.');
+    }
+    startListening();
+  };
+  try { rec.start(); } catch { /* already running */ }
+}
+
+function submitVoice(text) {
+  vSilent = 0; vSpokenLen = 0; vPending = 0; vDone = false;
+  voiceYou.textContent = '🗣 ' + text;
+  voiceAI.textContent = '';
+  setVoiceState('thinking', 'Thinking…');
+  if (voiceSession) voiceSession.interrupted = false;
+  send(text, { voice: true });
+}
+
+function afterAnswer() {
+  if (!voiceOn) return;
+  if (settings.handsFree) setTimeout(() => { if (voiceOn && voiceOrb.dataset.state !== 'thinking') startListening(); }, 500);
+  else setVoiceState('paused', 'Tap the orb to talk');
+}
+function maybeFinish() {
+  if (voiceOn && vDone && vPending === 0) afterAnswer();
+}
+
+function openVoice() {
+  if (!voiceSupported) return toast('Voice mode needs Chrome, Edge or Safari.');
+  if (isLoading) return toast('Please wait for the answer to finish.');
+  if (JSON_MODES.includes(currentMode)) return toast('Voice works in the other tools, not Quiz or Flashcards. Pick another tool first.');
+  stopReading();
+  voiceOn = true;
+  voiceSession = {
+    interrupted: false,
+    // called with the answer so far while it streams in
+    onText(full, done) {
+      if (!voiceOn) return;
+      const clean = speakable(full);
+      voiceAI.textContent = clean.trim();
+      voiceAI.scrollIntoView({ block: 'nearest' });
+      const rest = clean.slice(vSpokenLen);
+      const cut = done ? rest.length : lastBoundary(rest);
+      if (cut > 0) {
+        vSpokenLen += cut;
+        rest.slice(0, cut).split(/\n+/).flatMap(pieces).filter((x) => /[\p{L}\p{N}]/u.test(x)).forEach((sentence) => {
+          vPending++;
+          setVoiceState('speaking', 'Speaking… tap the orb to interrupt');
+          speakText(sentence, () => { vPending--; maybeFinish(); });
+        });
+      }
+      if (done) { vDone = true; maybeFinish(); }
+    },
+    // something went wrong, or you pressed stop
+    onFail(err) {
+      if (!voiceOn) return;
+      const interrupted = this.interrupted;
+      cancelSpeech();
+      if (err && err.name === 'AbortError') {
+        if (interrupted) startListening();
+        else setVoiceState('paused', 'Stopped. Tap the orb to talk.');
+      } else {
+        voiceAI.textContent = (err && err.message) || 'Something went wrong.';
+        setVoiceState('paused', 'Something went wrong. Tap the orb to try again.');
+      }
+    },
+  };
+  voiceTitle.textContent = '🎧 Voice mode · ' + MODES[currentMode].name;
+  voiceLang.value = settings.language;
+  voiceYou.textContent = '';
+  voiceAI.textContent = '';
+  refreshVoiceChips();
+  voiceOverlay.classList.remove('hidden');
+  // Some browsers only allow speaking after a tap: this silent word "unlocks" it
+  try {
+    const unlock = new SpeechSynthesisUtterance(' ');
+    unlock.volume = 0;
+    synth.speak(unlock);
+  } catch { /* not important */ }
+  startListening();
+}
+
+function closeVoice() {
+  if (!voiceOn) return;
+  voiceOn = false;
+  voiceSession = null;
+  if (vRec) { const r = vRec; vRec = null; try { r.abort(); } catch { /* ignore */ } }
+  cancelSpeech();
+  if (isLoading && abortController) abortController.abort();
+  voiceOverlay.classList.add('hidden');
+  renderChat();
+  scrollToBottom();
+}
+
+// The orb is the main button: it does what makes sense right now
+voiceOrb.addEventListener('click', () => {
+  const state = voiceOrb.dataset.state;
+  if (state === 'listening') {            // done talking: send what I heard
+    if (vRec) { vRec.manualStop = true; vRec.stop(); }
+  } else if (state === 'speaking') {      // interrupt the AI and talk
+    cancelSpeech();
+    if (isLoading) { if (voiceSession) voiceSession.interrupted = true; stopGenerating(); }
+    else startListening();
+  } else if (state === 'thinking') {      // cancel
+    stopGenerating();
+  } else {                                // paused: start listening
+    startListening();
+  }
+});
+voiceHands.addEventListener('click', () => { settings.handsFree = !settings.handsFree; saveSettings(); refreshVoiceChips(); });
+voiceSpeed.addEventListener('click', () => {
+  const i = VOICE_SPEEDS.indexOf(Number(settings.voiceRate) || 1);
+  settings.voiceRate = String(VOICE_SPEEDS[(i + 1) % VOICE_SPEEDS.length]);
+  saveSettings(); refreshVoiceChips();
+  toast('Speed ' + settings.voiceRate + '× (applies to the next sentence)');
+});
+voiceLang.addEventListener('change', () => {
+  settings.language = voiceLang.value;
+  saveSettings();
+  warnedVoice = false;
+  toast('Language: ' + settings.language);
+  if (voiceOrb.dataset.state === 'listening') { if (vRec) { const r = vRec; vRec = null; try { r.abort(); } catch { /* ignore */ } } startListening(); }
+});
+$('voiceEnd').addEventListener('click', closeVoice);
+$('voiceClose').addEventListener('click', closeVoice);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && voiceOn) closeVoice(); });
+
+if (voiceSupported) voiceBtn.addEventListener('click', openVoice);
+else voiceBtn.classList.add('hidden'); // this browser can't do voice conversation
 
 // ---------- 17. Switching tools, menu, keyboard ----------
 // Fill the welcome screen with the text and example chips of the chosen tool

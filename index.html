@@ -35,7 +35,7 @@
         <button class="tool" data-mode="resume">📄 Resume guidance</button>
       </nav>
 
-      <p class="side-title">Recent chats</p>
+      <p class="side-title" id="chatListTitle">Recent chats</p>
       <div class="chat-list" id="chatList"></div>
 
       <p class="side-foot">AI can make mistakes. Verify important facts with your textbook or teacher.</p>
@@ -502,6 +502,7 @@
       <footer class="composer">
         <button class="icon-btn" id="attachBtn" title="Attach a PDF or image" aria-label="Attach a file">📎</button>
         <input type="file" id="fileInput" accept="application/pdf,image/png,image/jpeg,image/webp" hidden />
+        <button class="icon-btn" id="voiceBtn" title="Voice conversation (talk and listen)" aria-label="Voice conversation">🎧</button>
         <button class="icon-btn" id="micBtn" title="Speak your question" aria-label="Voice input">🎤</button>
         <textarea id="input" rows="1" placeholder="Type your question... (Enter to send, Shift+Enter for new line)"></textarea>
         <button class="send" id="sendBtn" aria-label="Send">➤</button>
@@ -578,6 +579,35 @@
   </dialog>
 
   <!-- Small message that pops up at the bottom (e.g. "Copied!") -->
+
+  <!-- ============ VOICE MODE: talk to the AI and hear the answer ============ -->
+  <div class="voice-overlay hidden" id="voiceOverlay" role="dialog" aria-modal="true" aria-label="Voice conversation">
+    <div class="voice-top">
+      <span class="voice-title" id="voiceTitle">🎧 Voice mode</span>
+      <select id="voiceLang" aria-label="Voice language">
+        <option value="English">English</option>
+        <option value="Hindi">हिन्दी</option>
+        <option value="Telugu">తెలుగు</option>
+      </select>
+      <button class="voice-x" id="voiceClose" aria-label="Close voice mode">✕</button>
+    </div>
+    <!-- The orb: tap it to talk, interrupt or stop. Its look shows what the AI is doing. -->
+    <button class="orb" id="voiceOrb" data-state="listening" aria-label="Tap to talk or interrupt">
+      <span class="ring r1"></span><span class="ring r2"></span><span class="ring r3"></span>
+      <span class="core"><span class="bars"><i></i><i></i><i></i><i></i><i></i></span></span>
+    </button>
+    <div class="voice-status" id="voiceStatus" aria-live="polite">Listening…</div>
+    <div class="voice-text">
+      <p class="you" id="voiceYou"></p>
+      <p class="ai" id="voiceAI"></p>
+    </div>
+    <div class="voice-bar">
+      <button class="voice-chip" id="voiceHands" title="After the answer, listen again by itself">Hands-free: on</button>
+      <button class="voice-chip" id="voiceSpeed" title="Speaking speed">Speed 1×</button>
+      <button class="voice-chip end" id="voiceEnd">End</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast" role="status"></div>
 
   <script src="script.js"></script>

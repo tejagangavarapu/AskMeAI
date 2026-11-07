@@ -146,7 +146,7 @@ function describeContext(ctx) {
 // ---------------------------------------------------------------------
 function prepareRequest(reqBody) {
   const {
-    message, history = [], mode = 'chat', language, marks, answerLanguage, context, attachment,
+    message, history = [], mode = 'chat', language, marks, answerLanguage, context, attachment, voice,
   } = reqBody || {};
 
   // Never trust data from the browser - validate everything
@@ -177,6 +177,10 @@ function prepareRequest(reqBody) {
   }
   if (LANGUAGE_NOTES[answerLanguage]) {
     systemText += '\n\n' + LANGUAGE_NOTES[answerLanguage];
+  }
+  // Voice conversation: the answer will be READ ALOUD, so keep it short and natural
+  if (voice === true && !JSON_MODES.includes(mode)) {
+    systemText += '\n\nThe student is talking to you by VOICE and your answer will be read aloud. Reply like a friendly spoken conversation: short sentences, plain words, no tables, no headings, no emojis and no bullet symbols. Keep it under about 120 words unless the student asks for more. If code is really needed, keep it very short and say that it is shown on the screen.';
   }
 
   // ----- The student's message (plus an optional attached file) -----
@@ -423,7 +427,9 @@ app.post('/api/chat', chatLimiter, readJson, async (req, res) => {
 app.use((req, res) => res.status(404).send('Not found'));
 
 // Error handler: for example, a file that is too big for the 8 MB limit
- app.use((err, req, res, next) => {
+// (Express recognises an error handler by its 4 parameters.)
+// eslint-disable-next-line no-unused-vars
+app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   const tooBig = err && err.type === 'entity.too.large';
   res.status(tooBig ? 413 : 400).json({

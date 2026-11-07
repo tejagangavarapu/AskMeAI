@@ -34,6 +34,8 @@ GEMINI_MODEL=gemini-3.5-flash-lite
 PORT=3000
 ```
 
+   **Several keys (optional):** use `GEMINI_API_KEYS=key1,key2,key3,key4` (separated by commas, no spaces needed) instead of `GEMINI_API_KEY`. Requests are spread over the keys, and if one runs out of quota or is rejected, the server quietly retries with the next. Gemini limits are counted **per Google Cloud project**, so keys that live in the same project share one quota; create each key in a different project for separate quotas, and check Google's Gemini API terms first.
+
 5. Start the app:
 
 ```bash
@@ -53,7 +55,8 @@ npm start
 | Feature | How to use it |
 |---|---|
 | **Streaming answers** | Text appears word by word. Press **■** to stop. |
-| **Saved chats** | Every chat is saved in your browser (sidebar → Recent chats). |
+| **Saved chats (one set per tool)** | Every tool has its own chats: Quiz chats stay in Quiz, Notes chats in Notes. Click a tool to see its latest chat; **+ New chat** starts an empty chat in the tool you are using. Chats are saved in your browser (sidebar → Recent chats). |
+| **A different look for every tool** | Each tool has its own animated background, colours and welcome card. |
 | **Copy / Regenerate / Simpler / Deeper** | Buttons under the latest answer. |
 | **Study settings (⚙️)** | Set university/course, semester, subject and answer language (English, Hindi, Telugu). |
 | **Light / dark theme** | ☀️ / 🌙 button in the top bar. |
@@ -62,6 +65,7 @@ npm start
 | **Exam mode** | 📚 Exam mode → choose 2 / 5 / 10 marks → type a topic. These are exam-*style* practice questions, not real past papers. |
 | **Progress (📊)** | Day streak, quizzes taken, average score, topics studied. |
 | **PDF / image input (📎)** | Attach a PDF, PNG, JPG or WEBP (max 5 MB) and ask about it. Press ✕ on the file chip when you are done. |
+| **Animated background** | A night study-desk scene (moon, stars, lamp, books, clock) sits behind the chat. It follows light/dark mode and switches off if your device is set to reduce motion. |
 | **Voice input (🎤)** | Speak your question. Works in Chrome, Edge and Safari (needs https or localhost). Follows your answer language. |
 
 ## How it works
@@ -72,7 +76,7 @@ Browser ← words as they arrive ←──────────── server.
 ```
 
 - Quiz and flashcards use `/api/chat` (they need the complete JSON before they can be drawn).
-- Your API key stays in `server.js`; the browser never sees it.
+- Your API keys stay on the server; the browser never sees them. Never paste keys in chat or commit them to GitHub.
 
 ## Privacy
 
@@ -92,7 +96,7 @@ Browser ← words as they arrive ←──────────── server.
 1. Put all files except `.env` and `node_modules` on GitHub.
 2. Render → New → Web Service → connect the repo.
 3. Build command `npm install`, start command `npm start`.
-4. Environment variables: `GEMINI_API_KEY` and `GEMINI_MODEL=gemini-3.5-flash-lite`.
+4. Environment variables: `GEMINI_API_KEYS` (all keys, comma-separated; or `GEMINI_API_KEY` for one) and `GEMINI_MODEL=gemini-3.5-flash-lite`.
 5. To update later, edit the files on GitHub; Render redeploys automatically.
 
 The free plan sleeps when idle, so the first request after a pause can take 30-60 seconds.
@@ -105,3 +109,15 @@ The free plan sleeps when idle, so the first request after a pause can take 30-6
 - **Microphone does nothing**: allow the microphone in your browser, and use Chrome, Edge or Safari. Firefox has no speech recognition.
 - **PDF too big**: the limit is 5 MB. Split the file or attach fewer pages.
 - **Port in use**: change `PORT` in `.env`.
+
+## 🎧 Voice conversation (like ChatGPT voice)
+
+Tap the **🎧** button next to the message box.
+
+- Speak your question, the AI answers **out loud** sentence by sentence while it is still writing, then listens again (hands-free).
+- Tap the glowing orb: while listening = send what you said, while speaking = interrupt and talk, while thinking = stop.
+- Chips on the screen: **Hands-free** on/off, **speed** (0.85x to 1.3x), and **language**.
+- Every answer also has a **🔊 Listen** button to read it aloud.
+- Spoken answers are short and plain (no tables or emojis); code is shown on screen only.
+- Works in Chrome, Edge and Safari, needs internet and microphone permission. Hindi/Telugu voices depend on voices installed on your device.
+- Not available inside Quiz and Flashcards.
