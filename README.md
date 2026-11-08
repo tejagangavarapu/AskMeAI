@@ -1,4 +1,4 @@
-# 🎓 Aks Me AI
+# 🎓 Ask Me AI
 
 An AI study assistant for students: chat, programming tutor, notes, interactive quizzes, flashcards, exam-style answers, study planner, coding challenges, interview prep and resume guidance, plus course tools for **Agriculture 🌾, Business management 💼 and Pharmacy 💊** students. Built with HTML/CSS/JavaScript, Node.js + Express and the Google Gemini API.
 

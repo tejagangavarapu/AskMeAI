@@ -1,5 +1,5 @@
 // =====================================================================
-// server.js  -  The BACKEND of Aks Me AI  (version 3)
+// server.js  -  The BACKEND of Ask Me AI  (version 3)
 // ---------------------------------------------------------------------
 // The browser never talks to Google directly (your API key would leak).
 // Instead:   Browser  -->  this server  -->  Gemini API
@@ -69,7 +69,7 @@ app.get('/script.js', (req, res) => res.sendFile(path.join(__dirname, 'script.js
 // ---------------------------------------------------------------------
 // The "personality" of the AI
 // ---------------------------------------------------------------------
-const BASE_PROMPT = `You are "Aks Me AI", a friendly and patient AI tutor for college students (engineering, agriculture, business management and pharmacy).
+const BASE_PROMPT = `You are "Ask Me AI", a friendly and patient AI tutor for college students (engineering, agriculture, business management and pharmacy).
 You help with programming, AI, Machine Learning, mathematics, engineering subjects, agriculture, business management,
 pharmacy, aptitude, interview preparation and semester subjects.
 Rules:
@@ -441,5 +441,5 @@ app.use((err, req, res, next) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`✅ Aks Me AI is running at http://localhost:${PORT}  (model: ${MODEL}, API keys loaded: ${API_KEYS.length})`);
+  console.log(`✅ Ask Me AI is running at http://localhost:${PORT}  (model: ${MODEL}, API keys loaded: ${API_KEYS.length})`);
 });

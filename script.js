@@ -57,7 +57,7 @@ const MODES = {
 
 // What the welcome screen shows for each tool: icon, title, text, example chips (label, question) and a tip
 const WELCOME = {
-  chat: { icon: '💬', title: "Hi! I'm Aks Me AI 👋", text: 'Your study buddy for programming, AI/ML, maths and engineering subjects.',
+  chat: { icon: '💬', title: "Hi! I'm Ask Me AI 👋", text: 'Your study buddy for programming, AI/ML, maths and engineering subjects.',
     chips: [['Explain neural networks', 'Explain what a neural network is, step by step'], ['Python loops', 'Teach me loops in Python with examples'], ['Supervised vs Unsupervised', 'Difference between supervised and unsupervised learning'], ['Pointers in C', 'Explain pointers in C for a beginner']],
     tip: '💡 Tip: tap ⚙️ to set your semester and subject, 📎 to attach a PDF, 🎤 to speak.' },
   tutor: { icon: '👨‍💻', title: "Let's learn to code! 👨‍💻", text: 'Pick a language at the top, then type a topic. I will teach it from zero with commented examples.',
