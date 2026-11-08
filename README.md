@@ -1,6 +1,6 @@
 # 🎓 Aks Me AI
 
-An AI study assistant for students: chat, programming tutor, notes, interactive quizzes, flashcards, exam-style answers, study planner, coding challenges, interview prep and resume guidance. Built with HTML/CSS/JavaScript, Node.js + Express and the Google Gemini API.
+An AI study assistant for students: chat, programming tutor, notes, interactive quizzes, flashcards, exam-style answers, study planner, coding challenges, interview prep and resume guidance, plus course tools for **Agriculture 🌾, Business management 💼 and Pharmacy 💊** students. Built with HTML/CSS/JavaScript, Node.js + Express and the Google Gemini API.
 
 ## Folder structure
 
@@ -122,3 +122,7 @@ Tap the **🎧** button next to the message box.
 - Spoken answers are short and plain (no tables or emojis); code is shown on screen only.
 - Works in Chrome, Edge and Safari, needs internet and microphone permission. Hindi/Telugu voices depend on voices installed on your device.
 - Not available inside Quiz and Flashcards.
+
+## 🌾 💼 💊 Other courses
+
+The sidebar has an **Other courses** section with one tool each for Agriculture, Business management and Pharmacy students. Each tool has its own animated background, colours, welcome card, AI teaching style (set in `MODE_PROMPTS` in `server.js`) and separate chat history. Pharmacy answers are for study only, not personal medical advice.

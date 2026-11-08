@@ -627,3 +627,24 @@ dialog h3 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; 
   .composer textarea, dialog input, dialog select { font-size: 16px; }
   .toast { bottom: calc(80px + env(safe-area-inset-bottom)); }
 }
+
+/* ---- extra animations for the Agriculture, Business and Pharmacy scenes ---- */
+.m-sway { transform-box: view-box; animation: m-sway 3s ease-in-out infinite alternate; }
+.m-sway { transform-box: fill-box; transform-origin: 50% 100%; }
+@keyframes m-sway { from { transform: rotate(-7deg); } to { transform: rotate(7deg); } }
+.m-drift { animation: m-drift 16s ease-in-out infinite alternate; }
+@keyframes m-drift { from { transform: translateX(-50px); } to { transform: translateX(70px); } }
+.m-drop { animation: m-drop 1.4s linear infinite; }
+@keyframes m-drop { 0% { transform: translateY(0); opacity: 0.9; } 100% { transform: translateY(190px); opacity: 0; } }
+.m-drive { animation: m-drive 24s linear infinite; }
+@keyframes m-drive { from { transform: translateX(-300px); } to { transform: translateX(1300px); } }
+.m-wheel { transform-box: fill-box; transform-origin: center; animation: m-spin 1.4s linear infinite; }
+.m-flap { animation: m-flap 0.6s ease-in-out infinite alternate; transform-box: fill-box; transform-origin: center; }
+@keyframes m-flap { from { transform: scaleY(1); } to { transform: scaleY(-0.6); } }
+.m-bar { transform-box: fill-box; transform-origin: 50% 100%; animation: m-bar 6s ease-in-out infinite; }
+@keyframes m-bar { 0% { transform: scaleY(0); } 25%, 85% { transform: scaleY(1); } 100% { transform: scaleY(0); } }
+.m-bub { animation: m-bub 3s ease-in infinite; }
+@keyframes m-bub { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 0.9; } 100% { transform: translateY(-110px); opacity: 0; } }
+:root[data-mode="agri"]   { --accent: #65a30d; --accent-2: #16a34a; }
+:root[data-mode="biz"]    { --accent: #ca8a04; --accent-2: #1d4ed8; }
+:root[data-mode="pharma"] { --accent: #7c3aed; --accent-2: #06b6d4; }

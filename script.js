@@ -50,6 +50,9 @@ const MODES = {
   challenge:  { name: 'Coding challenge',    hint: 'Practice problems',                    placeholder: 'Topic, e.g. "strings" or "recursion"' },
   interview:  { name: 'Interview questions', hint: 'Prepare for interviews',               placeholder: 'Topic, e.g. "Machine Learning" or "Java OOP"' },
   resume:     { name: 'Resume guidance',     hint: 'Paste your resume or ask for tips',    placeholder: 'Ask for tips or paste your resume text...' },
+  agri:       { name: 'Agriculture',         hint: 'Crops, soil, irrigation, farm science', placeholder: 'Ask e.g. "Types of soil" or "Integrated pest management"' },
+  biz:        { name: 'Business management', hint: 'BBA / MBA concepts and case thinking', placeholder: 'Ask e.g. "SWOT analysis" or "4 Ps of marketing"' },
+  pharma:     { name: 'Pharmacy',            hint: 'Pharmaceutics, pharmacology, pharmacognosy', placeholder: 'Ask e.g. "Types of tablets" or "Beta blockers"' },
 };
 
 // What the welcome screen shows for each tool: icon, title, text, example chips (label, question) and a tip
@@ -84,9 +87,18 @@ const WELCOME = {
   resume: { icon: '📄', title: 'Resume guidance 📄', text: 'Ask for tips, or paste your resume text and I will review it.',
     chips: [['Fresher resume tips', 'How do I write a good resume as a fresher engineering student?'], ['Projects for AI/ML', 'Which projects should I add to my resume for AI and ML?'], ['Write my summary', 'Help me write a resume summary'], ['Skills section tips', 'How should I write the skills section of my resume?']],
     tip: '💡 Tip: remove your phone number and address before pasting your resume.' },
+  agri: { icon: '🌾', title: 'Agriculture 🌾', text: 'Learn crop science, soil, irrigation, pests, farm machinery and agri-economics in simple words.',
+    chips: [['Types of soil', 'Explain the types of soil and which crops grow in each'], ['Drip vs sprinkler irrigation', 'Difference between drip and sprinkler irrigation'], ['Integrated pest management', 'Explain integrated pest management (IPM) with examples'], ['Kharif and Rabi crops', 'Explain Kharif and Rabi crops with examples']],
+    tip: '💡 Tip: ask for a 2, 5 or 10 mark answer, or tap Quiz to test yourself on any farm topic.' },
+  biz: { icon: '💼', title: 'Business management 💼', text: 'Learn management, marketing, finance, HR and operations with simple examples and mini case studies.',
+    chips: [['SWOT analysis', 'Explain SWOT analysis with a real company example'], ['4 Ps of marketing', 'Explain the 4 Ps of marketing with an example'], ['Balance sheet basics', 'Explain a balance sheet in simple words'], ['Leadership styles', 'Explain the main leadership styles with examples']],
+    tip: '💡 Tip: paste a case study and ask me to analyse it step by step.' },
+  pharma: { icon: '💊', title: 'Pharmacy 💊', text: 'Learn pharmaceutics, pharmacology, pharmacognosy, medicinal chemistry and pharmacy practice for exams.',
+    chips: [['Types of tablets', 'Explain the types of tablets and how they are made'], ['Beta blockers', 'Explain beta blockers: mechanism, uses and side effects'], ['Drug absorption', 'Explain how a drug is absorbed, ADME in simple words'], ['Pharmacognosy basics', 'Explain the basics of pharmacognosy with examples']],
+    tip: '💡 Tip: this is for studying only. For your own medicine, always ask a doctor or pharmacist.' },
 };
 const JSON_MODES = ['quiz', 'flashcards'];  // these answers are JSON, shown as cards/quiz
-const LEARNING_MODES = ['tutor', 'notes', 'quiz', 'flashcards', 'exam', 'planner', 'challenge', 'interview'];
+const LEARNING_MODES = ['tutor', 'notes', 'quiz', 'flashcards', 'exam', 'planner', 'challenge', 'interview', 'agri', 'biz', 'pharma'];
 
 // ---------- 3. Saving and loading (localStorage) ----------
 // try/catch because some browsers (private mode) block storage.
