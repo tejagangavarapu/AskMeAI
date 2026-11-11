@@ -64,7 +64,7 @@ npm start
 | **Flashcards** | 🃏 Flashcards → tap a card to flip it. |
 | **Exam mode** | 📚 Exam mode → choose 2 / 5 / 10 marks → type a topic. These are exam-*style* practice questions, not real past papers. |
 | **Progress (📊)** | Day streak, quizzes taken, average score, topics studied. |
-| **PDF / image input (📎)** | Attach a PDF, PNG, JPG or WEBP (max 5 MB) and ask about it. Press ✕ on the file chip when you are done. |
+| **PDF / image input (📎)** | Attach a PDF, PNG, JPG or WEBP (max 14 MB) and ask about it. Press ✕ on the file chip when you are done. |
 | **Animated background** | A night study-desk scene (moon, stars, lamp, books, clock) sits behind the chat. It follows light/dark mode and switches off if your device is set to reduce motion. |
 | **Voice input (🎤)** | Speak your question. Works in Chrome, Edge and Safari (needs https or localhost). Follows your answer language. |
 
@@ -107,7 +107,7 @@ The free plan sleeps when idle, so the first request after a pause can take 30-6
 - **"API key was rejected"**: create a new key in Google AI Studio (normal keys start with `AIza`).
 - **"Usage limit reached"**: the free tier has limits; wait a minute.
 - **Microphone does nothing**: allow the microphone in your browser, and use Chrome, Edge or Safari. Firefox has no speech recognition.
-- **PDF too big**: the limit is 5 MB. Split the file or attach fewer pages.
+- **PDF too big**: the limit is 14 MB. Split the file or attach fewer pages.
 - **Port in use**: change `PORT` in `.env`.
 
 ## 🎧 Voice conversation (like ChatGPT voice)
@@ -126,3 +126,18 @@ Tap the **🎧** button next to the message box.
 ## 🌾 💼 💊 Other courses
 
 The sidebar has an **Other courses** section with one tool each for Agriculture, Business management and Pharmacy students. Each tool has its own animated background, colours, welcome card, AI teaching style (set in `MODE_PROMPTS` in `server.js`) and separate chat history. Pharmacy answers are for study only, not personal medical advice.
+
+## 🧮 Maths, Physics & Chemistry notes (B.Tech)
+
+Open **Maths · Physics · Chemistry** in the sidebar. Choose the **Subject**, **Note type**, type the **Chapter** and **Topic** (or tap a chapter chip) and press **Make notes**.
+
+- Note types: Detailed notes, Quick revision, Formulas and constants, Solved problems, Derivations and proofs, Exam questions with answers.
+- Notes follow a teacher's layout: introduction, definitions, laws/theorems, formula table, derivation, solved examples, common mistakes, exam questions and quick revision.
+- Formulas are drawn properly (fractions, integrals, matrices, chemical equations) with KaTeX. KaTeX is loaded from cdnjs.cloudflare.com, so the formulas need internet (without it you see the raw formula text).
+- Attach a PDF or photo of your sir's notes with 📎 and press Make notes: the notes are built from that file (PDF or photo up to 14 MB).
+- Press **📄 PDF** under any answer, then choose "Save as PDF" as the printer to download the notes.
+- You can also type any normal doubt in this tool.
+
+## Update: four separate science tools
+
+Under **B.Tech Maths & Science** there are now four tools: 📐 Maths, ⚛️ Physics, 🧪 Chemistry and ⚡ Basic Electrical Engg. Each has its own background, colours, chapter list and chats. Files you attach (PDF, PNG, JPG, WEBP) can now be up to **14 MB**.

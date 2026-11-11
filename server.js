@@ -49,11 +49,19 @@ app.set('trust proxy', 1);
 // ---------------------------------------------------------------------
 // Security middleware
 // ---------------------------------------------------------------------
-app.use(helmet());
-// A PDF/image travels inside the JSON (as text), so a chat request may be up to 8 MB.
+// helmet adds safe browser rules (CSP). We only add one thing: the maths library
+// (KaTeX, used to draw formulas) is loaded from cdnjs.cloudflare.com.
+const cspDefaults = (helmet.contentSecurityPolicy && helmet.contentSecurityPolicy.getDefaultDirectives)
+  ? helmet.contentSecurityPolicy.getDefaultDirectives() : {};
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: { ...cspDefaults, 'script-src': ["'self'", 'https://cdnjs.cloudflare.com'] },
+  },
+}));
+// A PDF/image travels inside the JSON (as text), so a chat request may be up to 22 MB (Gemini accepts about 20 MB per request).
 // We attach this reader to each route AFTER the rate limiter, so anyone sending
 // too many requests is turned away before we read their (big) data.
-const readJson = express.json({ limit: '8mb' });
+const readJson = express.json({ limit: '22mb' });
 
 const chatLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -78,12 +86,47 @@ Rules:
 - Put ALL code inside markdown code blocks with the language name, with comments in the code.
 - Use short headings and bullet points.
 - If the question is not educational, politely steer back to learning.
-- If you are not sure, say so instead of guessing.`;
+- If you are not sure, say so instead of guessing.
+- MATHS AND SCIENCE FORMULAS: always write them in LaTeX so the website can draw them: inline like $x^2 + 1$ and big ones on their own line between $$ and $$ (for example $$\\int_0^1 x^2\\,dx = \\frac{1}{3}$$). Use \\frac, \\sqrt, \\sum, \\int, \\begin{bmatrix}...\\end{bmatrix}. Chemical formulas and reactions use \\ce{...}, for example $\\ce{2H2 + O2 -> 2H2O}$. Never write formulas as plain text such as x^2/2, and never put formulas inside code blocks.`;
+
+// Quiz and flashcards are JSON shown as plain text, so they must not contain LaTeX
+const PLAIN_MATH_NOTE = 'In this JSON, write any maths in plain text such as x^2, sqrt(x), a/b and H2O. Do NOT use LaTeX or dollar signs.';
+
+// What "proper notes" means: the layout of good class notes written by a teacher.
+const NOTES_STYLE = `Write PROPER, complete STUDY NOTES like a good teacher's class notes (ignore the rule about being very short: notes must be complete). Use exactly these sections, with markdown headings:
+# Title
+## 1. Introduction  (what it is and why it matters, 2-3 lines, one real use)
+## 2. Key definitions  (bold each term)
+## 3. Main concepts  (laws, theorems or rules with their exact statements, in short points)
+## 4. Important formulas  (a table: Name | Formula | Meaning of the symbols)
+## 5. Derivation or working  (numbered steps, one line of explanation for each step)
+## 6. Solved examples  (2 to 3 examples with full step-by-step working and a final answer)
+## 7. Common mistakes
+## 8. Important exam questions  (2 marks, 5 marks, 10 marks)
+## 9. Quick revision  (5 to 8 short lines)
+Rules: be accurate and check every calculation twice; use standard textbook notation; if a PDF or image is attached, build the notes from its content, follow its notation and cover everything in it in an organised way.`;
+
+const SCI_TYPES = {
+  detailed: 'Write the FULL detailed notes using all 9 sections.',
+  quick: 'Write QUICK REVISION notes only: definitions, the formulas table, key points and 5 common exam questions. Keep it to one page.',
+  formulas: 'Write a FORMULA SHEET only: a table of every important formula (Name | Formula | Meaning and units | When to use it), grouped by sub-topic, plus the key constants.',
+  solved: 'Write SOLVED PROBLEMS: 6 problems from easy to hard, each with the question, full step-by-step solution, units and a final answer. Start with a 3-line reminder of the formulas used.',
+  derivations: 'Write the important DERIVATIONS and PROOFS in full, one by one: state what is to be proved, list assumptions, then numbered steps with the reason for each step, then the result.',
+  exam: 'Write EXAM QUESTIONS WITH ANSWERS: 4 questions of 2 marks, 3 of 5 marks and 2 of 10 marks, each with a complete model answer sized for its marks.',
+};
+const SCI_SUBJECTS = {
+  maths: 'MATHS (engineering mathematics)',
+  physics: 'PHYSICS (engineering physics)',
+  chem: 'CHEMISTRY (engineering chemistry)',
+  bee: 'BASIC ELECTRICAL ENGINEERING',
+};
+const sciPrompt = (focus) => `Act as a B.Tech first-year ${focus} teacher for Indian engineering students (JNTU / AKTU / VTU / Anna University style syllabus). The student message gives a Subject, a Chapter, a Topic and a Note type. If the Topic is empty, cover the whole Chapter; if the Chapter is empty, use the most standard chapter for the Topic. If the message is just a normal doubt or question (no Subject/Chapter/Topic lines), answer it like a patient teacher in clear numbered steps and do NOT use the 9 note sections. For notes: ` + NOTES_STYLE;
 
 // Extra instructions for each "mode" (the tools in the sidebar)
 const MODE_PROMPTS = {
+  ...Object.fromEntries(Object.entries(SCI_SUBJECTS).map(([k, f]) => [k, sciPrompt(f)])),
   chat: 'Answer clearly. End with one short follow-up question to check understanding.',
-  notes: 'Create well-organised STUDY NOTES: definition, key points, formulas/syntax, a small example, and a 5-line quick revision summary.',
+  notes: NOTES_STYLE + ' Subject-independent: adapt the sections to the topic (use formulas and a worked example only where they fit).',
   // The quiz is JSON so the website can turn it into a clickable quiz
   quiz: 'Create a QUIZ of 5 multiple-choice questions. Respond with ONLY a JSON array, no other text, in this exact form: [{"question":"...","options":["option 1","option 2","option 3","option 4"],"answer":0,"explanation":"one or two lines why"}]. "answer" is the index (0-3) of the correct option. Do not put letters like A) in front of the options.',
   planner: 'Create a day-by-day STUDY PLANNER. If days or hours per day are not given, assume 7 days and 2 hours/day. Use a markdown table: Day | Topic | Tasks | Time.',
@@ -119,7 +162,7 @@ const ALLOWED_LANGUAGES = ['Python', 'C', 'C++', 'Java', 'HTML', 'CSS', 'JavaScr
 
 // Files a student may attach
 const ALLOWED_FILE_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
-const MAX_FILE_CHARS = 7000000; // length of the base64 text (about a 5 MB file)
+const MAX_FILE_CHARS = 19000000; // length of the base64 text (about a 14 MB file; Gemini takes about 20 MB per request)
 
 // ---------------------------------------------------------------------
 // Small helpers
@@ -169,6 +212,12 @@ function prepareRequest(reqBody) {
   if (mode === 'tutor' && ALLOWED_LANGUAGES.includes(language)) {
     systemText += `\nThe programming language is ${language}. Use only ${language} for examples.`;
   }
+  if (SCI_SUBJECTS[mode]) {
+    const t = String(message).match(/Note type:\s*(.+)/i);
+    const key = Object.keys(SCI_TYPES).find((k) => t && t[1].toLowerCase().includes(k)) || 'detailed';
+    systemText += '\n' + SCI_TYPES[key];
+  }
+  if (JSON_MODES.includes(mode)) systemText += '\n' + PLAIN_MATH_NOTE;
   if (mode === 'exam') {
     const m = MARKS_GUIDE[Number(marks)] ? Number(marks) : 5;
     systemText += '\n' + MARKS_GUIDE[m];
@@ -183,7 +232,7 @@ function prepareRequest(reqBody) {
   }
   // Voice conversation: the answer will be READ ALOUD, so keep it short and natural
   if (voice === true && !JSON_MODES.includes(mode)) {
-    systemText += '\n\nThe student is talking to you by VOICE and your answer will be read aloud. Reply like a friendly spoken conversation: short sentences, plain words, no tables, no headings, no emojis and no bullet symbols. Keep it under about 120 words unless the student asks for more. If code is really needed, keep it very short and say that it is shown on the screen.';
+    systemText += '\n\nThe student is talking to you by VOICE and your answer will be read aloud. Reply like a friendly spoken conversation: short sentences, plain words, no tables, no headings, no LaTeX (say formulas in words, for example "x squared plus one"), no emojis and no bullet symbols. Keep it under about 120 words unless the student asks for more. If code is really needed, keep it very short and say that it is shown on the screen.';
   }
 
   // ----- The student's message (plus an optional attached file) -----
@@ -196,7 +245,7 @@ function prepareRequest(reqBody) {
       attachment.data.length <= MAX_FILE_CHARS &&
       /^[A-Za-z0-9+/=]+$/.test(attachment.data); // base64 characters only
     if (!okType || !okData) {
-      return { error: 'That file is not supported or is too large (PDF/PNG/JPG/WEBP, max 5 MB).', status: 400 };
+      return { error: 'That file is not supported or is too large (PDF/PNG/JPG/WEBP, max 14 MB).', status: 400 };
     }
     // Gemini reads PDFs and images directly when we send them as "inlineData"
     lastParts.unshift({ inlineData: { mimeType: attachment.mimeType, data: attachment.data } });
@@ -213,7 +262,7 @@ function prepareRequest(reqBody) {
   contents.push({ role: 'user', parts: lastParts });
 
   // 4096 so long answers (and Hindi/Telugu quizzes, which use more tokens) are not cut off
-  const generationConfig = { temperature: 0.7, maxOutputTokens: 4096 };
+  const generationConfig = { temperature: 0.7, maxOutputTokens: (SCI_SUBJECTS[mode] || ['notes', 'exam'].includes(mode)) ? 8192 : 4096 };
   // Quiz and flashcards must come back as clean JSON
   if (JSON_MODES.includes(mode)) generationConfig.responseMimeType = 'application/json';
   // Turn OFF "thinking" for the older Gemini 2.5 Flash models (faster answers)
@@ -429,14 +478,14 @@ app.post('/api/chat', chatLimiter, readJson, async (req, res) => {
 // Catch-all for unknown URLs
 app.use((req, res) => res.status(404).send('Not found'));
 
-// Error handler: for example, a file that is too big for the 8 MB limit
+// Error handler: for example, a file that is too big for the size limit
 // (Express recognises an error handler by its 4 parameters.)
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   if (res.headersSent) return next(err);
   const tooBig = err && err.type === 'entity.too.large';
   res.status(tooBig ? 413 : 400).json({
-    error: tooBig ? 'That file is too large (max 5 MB).' : 'Bad request.',
+    error: tooBig ? 'That file is too large (max 14 MB).' : 'Bad request.',
   });
 });
 

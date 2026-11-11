@@ -52,6 +52,10 @@ const MODES = {
   resume:     { name: 'Resume guidance',     hint: 'Paste your resume or ask for tips',    placeholder: 'Ask for tips or paste your resume text...' },
   agri:       { name: 'Agriculture',         hint: 'Crops, soil, irrigation, farm science', placeholder: 'Ask e.g. "Types of soil" or "Integrated pest management"' },
   biz:        { name: 'Business management', hint: 'BBA / MBA concepts and case thinking', placeholder: 'Ask e.g. "SWOT analysis" or "4 Ps of marketing"' },
+  maths:      { name: 'Maths',               hint: 'Pick a chapter and topic for proper notes', placeholder: 'Or just ask a doubt, e.g. "Why is the determinant zero?"' },
+  physics:    { name: 'Physics',             hint: 'Pick a chapter and topic for proper notes', placeholder: 'Or just ask a doubt, e.g. "Why does a laser need population inversion?"' },
+  chem:       { name: 'Chemistry',           hint: 'Pick a chapter and topic for proper notes', placeholder: 'Or just ask a doubt, e.g. "Why does iron rust faster in salt water?"' },
+  bee:        { name: 'Basic Electrical Engineering', hint: 'Circuits, machines, AC and more', placeholder: 'Or just ask a doubt, e.g. "Difference between star and delta?"' },
   pharma:     { name: 'Pharmacy',            hint: 'Pharmaceutics, pharmacology, pharmacognosy', placeholder: 'Ask e.g. "Types of tablets" or "Beta blockers"' },
 };
 
@@ -93,12 +97,24 @@ const WELCOME = {
   biz: { icon: '💼', title: 'Business management 💼', text: 'Learn management, marketing, finance, HR and operations with simple examples and mini case studies.',
     chips: [['SWOT analysis', 'Explain SWOT analysis with a real company example'], ['4 Ps of marketing', 'Explain the 4 Ps of marketing with an example'], ['Balance sheet basics', 'Explain a balance sheet in simple words'], ['Leadership styles', 'Explain the main leadership styles with examples']],
     tip: '💡 Tip: paste a case study and ask me to analyse it step by step.' },
+  maths: { icon: '📐', title: 'Maths 📐', text: 'Choose a chapter and topic above the message box and get proper class notes with real formulas, derivations, solved examples and exam questions.',
+    chips: [['Rank of a matrix', 'Subject: Mathematics\nChapter: Matrices and linear systems\nTopic: Rank of a matrix\nNote type: Detailed notes'], ['Eigenvalues', 'Subject: Mathematics\nChapter: Eigenvalues and eigenvectors\nTopic: Eigenvalues and eigenvectors\nNote type: Detailed notes'], ['Laplace formulas', 'Subject: Mathematics\nChapter: Laplace transforms\nTopic: Standard Laplace transforms\nNote type: Formulas and constants'], ['Fourier series problems', 'Subject: Mathematics\nChapter: Fourier series\nTopic: Fourier series of simple functions\nNote type: Solved problems']],
+    tip: '💡 Tip: your sir sent a notes PDF? Tap 📎, attach it, choose a note type and tap Make notes. I will build proper notes from it.' } ,
+  physics: { icon: '⚛️', title: 'Physics ⚛️', text: 'Choose a chapter and topic above the message box and get proper class notes with laws, derivations, numericals and exam questions.',
+    chips: [['Lasers', 'Subject: Physics\nChapter: Lasers\nTopic: Working of a laser\nNote type: Detailed notes'], ['Interference', 'Subject: Physics\nChapter: Wave optics: interference\nTopic: Young\'s double slit experiment\nNote type: Detailed notes'], ['Schrodinger equation', 'Subject: Physics\nChapter: Quantum mechanics\nTopic: Schrodinger wave equation\nNote type: Derivations and proofs'], ['Maxwell equations', 'Subject: Physics\nChapter: Electromagnetic theory\nTopic: Maxwell\'s equations\nNote type: Quick revision']],
+    tip: '💡 Tip: your sir sent a notes PDF? Tap 📎, attach it, choose a note type and tap Make notes. I will build proper notes from it.' } ,
+  chem: { icon: '🧪', title: 'Chemistry 🧪', text: 'Choose a chapter and topic above the message box and get proper class notes with reactions, diagrams in words, numericals and exam questions.',
+    chips: [['Corrosion', 'Subject: Chemistry\nChapter: Corrosion and its control\nTopic: Types of corrosion\nNote type: Detailed notes'], ['Water hardness', 'Subject: Chemistry\nChapter: Water technology\nTopic: Hardness of water and its estimation\nNote type: Solved problems'], ['Batteries', 'Subject: Chemistry\nChapter: Electrochemistry and batteries\nTopic: Lithium-ion battery\nNote type: Detailed notes'], ['Polymers', 'Subject: Chemistry\nChapter: Polymers and plastics\nTopic: Types of polymerization\nNote type: Quick revision']],
+    tip: '💡 Tip: your sir sent a notes PDF? Tap 📎, attach it, choose a note type and tap Make notes. I will build proper notes from it.' } ,
+  bee: { icon: '⚡', title: 'Basic Electrical Engineering ⚡', text: 'Choose a chapter and topic above the message box and get proper class notes on circuits, AC, transformers and machines, with formulas and solved problems.',
+    chips: [['Ohm\'s law and KVL', 'Subject: Basic Electrical Engineering\nChapter: DC circuits\nTopic: Ohm\'s law, KCL and KVL\nNote type: Detailed notes'], ['Thevenin theorem', 'Subject: Basic Electrical Engineering\nChapter: Network theorems\nTopic: Thevenin\'s theorem\nNote type: Solved problems'], ['Transformer', 'Subject: Basic Electrical Engineering\nChapter: Single-phase transformers\nTopic: Working and EMF equation\nNote type: Detailed notes'], ['Three-phase circuits', 'Subject: Basic Electrical Engineering\nChapter: Three-phase circuits\nTopic: Star and delta connections\nNote type: Quick revision']],
+    tip: '💡 Tip: attach your sir\'s PDF with 📎 and I will build the notes from it. You can also ask any doubt in the box below.' },
   pharma: { icon: '💊', title: 'Pharmacy 💊', text: 'Learn pharmaceutics, pharmacology, pharmacognosy, medicinal chemistry and pharmacy practice for exams.',
     chips: [['Types of tablets', 'Explain the types of tablets and how they are made'], ['Beta blockers', 'Explain beta blockers: mechanism, uses and side effects'], ['Drug absorption', 'Explain how a drug is absorbed, ADME in simple words'], ['Pharmacognosy basics', 'Explain the basics of pharmacognosy with examples']],
     tip: '💡 Tip: this is for studying only. For your own medicine, always ask a doctor or pharmacist.' },
 };
 const JSON_MODES = ['quiz', 'flashcards'];  // these answers are JSON, shown as cards/quiz
-const LEARNING_MODES = ['tutor', 'notes', 'quiz', 'flashcards', 'exam', 'planner', 'challenge', 'interview', 'agri', 'biz', 'pharma'];
+const LEARNING_MODES = ['tutor', 'notes', 'quiz', 'flashcards', 'exam', 'planner', 'challenge', 'interview', 'agri', 'biz', 'pharma', 'maths', 'physics', 'chem', 'bee'];
 
 // ---------- 3. Saving and loading (localStorage) ----------
 // try/catch because some browsers (private mode) block storage.
@@ -122,12 +138,13 @@ function save(key, value) {
 
 // ---------- 4. App state (data that changes) ----------
 let settings = Object.assign(
-  { theme: 'dark', university: '', semester: '', subject: '', language: 'English', marks: '5', progLang: 'Python', voiceRate: '1', handsFree: true, bargeIn: true },
+  { theme: 'dark', university: '', semester: '', subject: '', language: 'English', marks: '5', progLang: 'Python', voiceRate: '1', handsFree: true, bargeIn: true, sciType: 'Detailed notes' },
   load(STORE.settings, {})
 );
 let chats = load(STORE.chats, []);
 if (!Array.isArray(chats)) chats = [];
 chats = chats.filter((c) => c && Array.isArray(c.messages)); // drop damaged data
+chats.forEach((c) => { if (c.tool === 'sci') c.tool = 'maths'; }); // the old single Maths/Physics/Chemistry tool
 
 let progress = Object.assign({ days: [], activity: [], quizzes: [], questions: 0 }, load(STORE.progress, {}));
 
@@ -197,14 +214,26 @@ function renderMarkdown(raw) {
     return `@@CODE${codeBlocks.length - 1}@@`; // placeholder
   });
 
+  // Step A2: `inline code` and maths ($x^2$ and $$...$$) are pulled out too, drawn by KaTeX
+  const kept = [];
+  const keep = (html) => { kept.push(html); return `@@I${kept.length - 1}@@`; };
+  text = text.replace(/`([^`\n]+)`/g, (m, code) => keep(`<code>${escapeHtml(code)}</code>`));
+  const bigMath = (m, tex) => { kept.push(mathHtml(tex.trim(), true)); return `\n@@D${kept.length - 1}@@\n`; };
+  text = text
+    .replace(/\$\$([\s\S]+?)\$\$/g, bigMath)
+    .replace(/\\\[([\s\S]+?)\\\]/g, bigMath)
+    .replace(/\\\(([\s\S]+?)\\\)/g, (m, tex) => keep(mathHtml(tex.trim(), false)))
+    .replace(/(?<![\\$])\$(?![\s$])([^$\n]+?)(?<![\s\\])\$(?!\d)/g, (m, tex) => keep(mathHtml(tex, false)));
+
   // Step B: escape the remaining text, then apply simple formatting
   text = escapeHtml(text);
   text = text
+    .replace(/^#### (.*)$/gm, '<h4>$1</h4>')
     .replace(/^### (.*)$/gm, '<h3>$1</h3>')
     .replace(/^## (.*)$/gm, '<h2>$1</h2>')
     .replace(/^# (.*)$/gm, '<h1>$1</h1>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    .replace(/(^|[^*\w])\*([^*\s][^*\n]*?)\*(?![*\w])/g, '$1<em>$2</em>');
 
   // Step C: go line by line to build lists, tables and paragraphs
   const lines = text.split('\n');
@@ -237,11 +266,15 @@ function renderMarkdown(raw) {
       if (listType !== 'ul') { closeList(); out += '<ul>'; listType = 'ul'; }
       out += `<li>${t.slice(2)}</li>`;
     } else if (/^\d+[.)] /.test(t)) {                   // numbered list item
-      if (listType !== 'ol') { closeList(); out += '<ol>'; listType = 'ol'; }
+      if (listType !== 'ol') { closeList(); out += `<ol start="${parseInt(t, 10)}">`; listType = 'ol'; } // keeps the numbers right after a formula line
       out += `<li>${t.replace(/^\d+[.)] /, '')}</li>`;
+    } else if (/^(-{3,}|\*{3,})$/.test(t)) {              // a line ---
+      closeList(); out += '<hr>';
+    } else if (/^&gt; ?/.test(t)) {                     // > quote / important box
+      closeList(); out += `<blockquote>${t.replace(/^&gt; ?/, '')}</blockquote>`;
     } else {
       closeList();
-      if (/^<h\d>/.test(t) || /^@@CODE\d+@@$/.test(t)) out += t;
+      if (/^<h\d>/.test(t) || /^@@CODE\d+@@$/.test(t) || /^@@D\d+@@$/.test(t)) out += t;
       else if (t) out += `<p>${t}</p>`;
     }
   }
@@ -249,7 +282,27 @@ function renderMarkdown(raw) {
   flushTable();
 
   // Step D: put the code blocks back in place of the placeholders
-  return out.replace(/@@CODE(\d+)@@/g, (m, i) => codeBlocks[i]);
+  return out
+    .replace(/@@CODE(\d+)@@/g, (m, i) => codeBlocks[i])
+    .replace(/@@[ID](\d+)@@/g, (m, i) => kept[i]);
+}
+
+// Draws one formula with KaTeX (loaded in index.html). Without KaTeX (no internet) the raw formula is shown.
+const mathCache = new Map();
+function mathHtml(tex, display) {
+  const key = (display ? 'D' : 'I') + tex;
+  if (mathCache.has(key)) return mathCache.get(key);
+  let html;
+  try {
+    if (!window.katex) throw new Error('no katex');
+    html = window.katex.renderToString(tex, { displayMode: display, throwOnError: false, strict: 'ignore' });
+  } catch {
+    html = `<span class="math-raw">${escapeHtml(display ? '$$' + tex + '$$' : '$' + tex + '$')}</span>`;
+    return html; // not cached: KaTeX may finish loading a moment later
+  }
+  if (mathCache.size > 500) mathCache.clear();
+  mathCache.set(key, html);
+  return html;
 }
 
 // ---------- 7. Theme (dark / light) ----------
@@ -537,6 +590,7 @@ function buildActions(msg, isLast) {
   if (msg.kind === 'text') {
     if (msg.text) add('📋 Copy', 'copy');
     if (msg.text && window.speechSynthesis) add('🔊 Listen', 'listen');
+    if (msg.text) add('📄 PDF', 'pdf');
     if (isLast) {
       add('🔄 Regenerate', 'regen');
       if (msg.text) {
@@ -874,7 +928,7 @@ async function send(rawText, opts = {}) {
   // Make a new saved chat the first time you send something
   let chat = currentChat();
   if (!chat) {
-    chat = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title: text.slice(0, 40), tool: currentMode, messages: [], updated: Date.now() };
+    chat = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 6), title: (opts.title || text).slice(0, 40), tool: currentMode, messages: [], updated: Date.now() };
     chats.unshift(chat);
     currentId = chat.id;
   }
@@ -949,6 +1003,7 @@ chatBox.addEventListener('click', async (e) => {
 
   if (action === 'copy') return copyText(msg.text, btn);
   if (action === 'listen') return toggleReadAloud(msg.text, btn);
+  if (action === 'pdf') return printAnswer(msg.text);
   if (isLoading) return toast('Please wait, or press ■ to stop first.');
 
   if (action === 'regen') regenerate(Number(row.dataset.index));
@@ -957,7 +1012,7 @@ chatBox.addEventListener('click', async (e) => {
 });
 
 // ---------- 15. Attach a PDF / image ----------
-const MAX_FILE_BYTES = 5 * 1024 * 1024; // 5 MB
+const MAX_FILE_BYTES = 14 * 1024 * 1024; // 14 MB (Gemini accepts about 20 MB per request, and the file grows by a third when sent)
 const FILE_TYPES = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
 
 attachBtn.addEventListener('click', () => fileInput.click());
@@ -967,7 +1022,7 @@ fileInput.addEventListener('change', () => {
   fileInput.value = ''; // so you can pick the same file again later
   if (!file) return;
   if (!FILE_TYPES.includes(file.type)) return toast('Please choose a PDF, PNG, JPG or WEBP file.');
-  if (file.size > MAX_FILE_BYTES) return toast('That file is too big. The limit is 5 MB.');
+  if (file.size > MAX_FILE_BYTES) return toast('That file is too big. The limit is 14 MB.');
 
   const reader = new FileReader();
   reader.onload = () => {
@@ -1098,6 +1153,8 @@ function speakable(md) {
     return ' The code is shown on the screen. ';
   });
   t = t
+    .replace(/\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]/g, ' The formula is shown on the screen. ')
+    .replace(/\\\(([\s\S]*?)\\\)|\$([^$\n]+?)\$/g, (m, a, b) => ' ' + (a || b).replace(/\\[a-zA-Z]+/g, ' ').replace(/[{}^_\\]/g, ' ') + ' ')
     .replace(/`([^`]*)`/g, '$1')
     .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(/https?:\/\/\S+/g, ' link ')
@@ -1406,6 +1463,86 @@ document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && voiceOn)
 if (voiceSupported) voiceBtn.addEventListener('click', openVoice);
 else voiceBtn.classList.add('hidden'); // this browser can't do voice conversation
 
+// ---------- 20. Maths, Physics & Chemistry: subject / chapter / topic form ----------
+// Typical first-year B.Tech chapters. They are only suggestions: you can type any chapter or topic.
+const SCI_CHAPTERS = {
+  maths: ['Matrices and linear systems', 'Eigenvalues and eigenvectors', 'Differential calculus', 'Mean value theorems', 'Partial differentiation', 'Multiple integrals', 'Vector calculus', 'First order differential equations', 'Higher order differential equations', 'Laplace transforms', 'Fourier series', 'Fourier transforms', 'Complex variables', 'Numerical methods', 'Probability and statistics', 'Discrete mathematics'],
+  physics: ['Wave optics: interference', 'Diffraction', 'Polarization', 'Lasers', 'Optical fibres', 'Quantum mechanics', 'Free electron theory', 'Band theory and semiconductors', 'Dielectric materials', 'Magnetic materials', 'Superconductivity', 'Electromagnetic theory', 'Nanomaterials', 'Ultrasonics', 'Crystallography and X-rays', 'Special relativity'],
+  bee: ["DC circuits: Ohm's law, KCL, KVL", 'Network theorems', 'Star-delta transformation', 'Single-phase AC circuits', 'Series and parallel resonance', 'Three-phase circuits', 'Single-phase transformers', 'DC generators', 'DC motors', 'Three-phase induction motors', 'Synchronous machines', 'Measuring instruments', 'Power generation and distribution', 'Earthing, fuses and MCB', 'Batteries and energy storage', 'Electrical wiring and safety'],
+  chem: ['Water technology', 'Electrochemistry and batteries', 'Corrosion and its control', 'Polymers and plastics', 'Fuels and combustion', 'Lubricants', 'Cement and refractories', 'Spectroscopy: UV, IR, NMR', 'Chemical bonding', 'Thermodynamics', 'Chemical kinetics', 'Phase rule', 'Green chemistry', 'Nanomaterials', 'Organic reactions', 'Stereochemistry'],
+};
+const sciBar = $('sciBar');
+const SCI_HINTS = { maths: ['Matrices', 'Rank of a matrix'], physics: ['Lasers', 'Population inversion'], chem: ['Corrosion', 'Galvanic corrosion'], bee: ['Network theorems', "Thevenin's theorem"] };
+const SCI_SUBJECT_OF = { maths: 'Mathematics', physics: 'Physics', chem: 'Chemistry', bee: 'Basic Electrical Engineering' };
+const sciType = $('sciType');
+const sciChapter = $('sciChapter');
+const sciTopic = $('sciTopic');
+const sciChips = $('sciChips');
+
+function renderSciChips() {
+  sciChips.innerHTML = '';
+  (SCI_CHAPTERS[currentMode] || []).forEach((name) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'sci-chip' + (sciChapter.value.trim() === name ? ' on' : '');
+    b.textContent = name;
+    b.addEventListener('click', () => { sciChapter.value = name; renderSciChips(); sciTopic.focus(); });
+    sciChips.appendChild(b);
+  });
+}
+
+function makeSciNotes() {
+  if (isLoading) return;
+  const chapter = sciChapter.value.trim();
+  const topic = sciTopic.value.trim();
+  if (!chapter && !topic && !attachment) return toast("Type a chapter or a topic first, or attach your sir's PDF with 📎.");
+  const subject = SCI_SUBJECT_OF[currentMode] || 'Mathematics';
+  const lines = ['Subject: ' + subject];
+  if (chapter) lines.push('Chapter: ' + chapter);
+  if (topic) lines.push('Topic: ' + topic);
+  else if (!chapter) lines.push('Topic: everything in the attached file');
+  lines.push('Note type: ' + sciType.value);
+  send(lines.join('\n'), { title: [chapter, topic].filter(Boolean).join(' · ') || subject + ' notes' });
+}
+
+sciType.value = settings.sciType || 'Detailed notes';
+if (!sciType.value) sciType.value = 'Detailed notes';
+sciType.addEventListener('change', () => { settings.sciType = sciType.value; saveSettings(); });
+sciChapter.addEventListener('input', renderSciChips);
+[sciChapter, sciTopic].forEach((el) => el.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); makeSciNotes(); } }));
+$('sciGo').addEventListener('click', makeSciNotes);
+renderSciChips();
+
+// ---------- 21. Download an answer as a PDF (uses the browser's print window: choose "Save as PDF") ----------
+const KATEX_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css';
+function printAnswer(text) {
+  const heading = (text.match(/^#{1,2}\s+(.+)$/m) || [])[1];
+  const title = (heading || (currentChat() && currentChat().title) || 'Ask Me AI notes').replace(/[*_`$\\]/g, '').slice(0, 80);
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+  document.body.appendChild(frame);
+  const doc = frame.contentWindow.document;
+  doc.open();
+  doc.write('<!doctype html><html><head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title>' +
+    '<link rel="stylesheet" href="' + KATEX_CSS + '">' +
+    '<style>@page{margin:16mm}body{font:12pt/1.55 "Segoe UI",Arial,sans-serif;color:#111;margin:0}' +
+    'h1{font-size:20pt;border-bottom:2px solid #7c3aed;padding-bottom:4pt}h2{font-size:14pt;color:#5b21b6;margin:16pt 0 4pt}h3{font-size:12.5pt}h4{font-size:12pt}' +
+    'table{border-collapse:collapse;width:100%;margin:8pt 0}th,td{border:1px solid #999;padding:4pt 6pt;text-align:left;vertical-align:top}th{background:#f1ecfb}' +
+    'blockquote{margin:8pt 0;padding:4pt 10pt;border-left:4px solid #7c3aed;background:#f6f3fc}code{background:#f3f4f6;padding:0 3pt;border-radius:3pt}' +
+    '.codebox pre{background:#f3f4f6;padding:8pt;white-space:pre-wrap;border-radius:4pt}.codebar,.copy{display:none}' +
+    '.katex-display{overflow:hidden;margin:8pt 0}.head{font-size:9pt;color:#666;margin-bottom:8pt}.foot{margin-top:18pt;font-size:9pt;color:#666;border-top:1px solid #ccc;padding-top:4pt}' +
+    'h1,h2,h3,table,blockquote{break-inside:avoid}</style></head><body>' +
+    '<div class="head">Ask Me AI</div>' + renderMarkdown(text) +
+    '<div class="foot">Made with Ask Me AI. AI can make mistakes: check important facts with your textbook or teacher.</div></body></html>');
+  doc.close();
+  toast('Opening the print window: choose "Save as PDF" as the printer.');
+  setTimeout(() => {   // a moment for the formula fonts to load
+    try { frame.contentWindow.focus(); frame.contentWindow.print(); } catch { toast('Could not open the print window.'); }
+    setTimeout(() => frame.remove(), 60000);
+  }, 1200);
+}
+
 // ---------- 17. Switching tools, menu, keyboard ----------
 // Fill the welcome screen with the text and example chips of the chosen tool
 function renderWelcome(mode) {
@@ -1429,6 +1566,8 @@ function setMode(mode) {
   input.placeholder = MODES[mode].placeholder;
   langSelect.classList.toggle('hidden', mode !== 'tutor'); // language picker only for tutor
   marksSelect.classList.toggle('hidden', mode !== 'exam'); // marks picker only for exam mode
+  sciBar.classList.toggle('hidden', !SCI_SUBJECT_OF[mode]);   // chapter / topic form only for Maths, Physics, Chemistry and Basic Electrical
+  if (SCI_SUBJECT_OF[mode] && sciBar.dataset.mode !== mode) { sciBar.dataset.mode = mode; sciChapter.value = ''; sciTopic.value = ''; const ph = SCI_HINTS[mode]; sciChapter.placeholder = 'e.g. ' + ph[0]; sciTopic.placeholder = 'e.g. ' + ph[1]; renderSciChips(); }
   updateContextBadge();
   document.querySelectorAll('.tool').forEach((b) => {
     b.classList.toggle('active', b.dataset.mode === mode);
