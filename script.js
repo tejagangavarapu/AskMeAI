@@ -52,6 +52,7 @@ const MODES = {
   resume:     { name: 'Resume guidance',     hint: 'Paste your resume or ask for tips',    placeholder: 'Ask for tips or paste your resume text...' },
   agri:       { name: 'Agriculture',         hint: 'Crops, soil, irrigation, farm science', placeholder: 'Ask e.g. "Types of soil" or "Integrated pest management"' },
   biz:        { name: 'Business management', hint: 'BBA / MBA concepts and case thinking', placeholder: 'Ask e.g. "SWOT analysis" or "4 Ps of marketing"' },
+  comm:       { name: 'Communication skills', hint: 'Spoken English, emails, GD and presentations', placeholder: 'Or chat here, e.g. "How do I introduce myself in an interview?"' },
   maths:      { name: 'Maths',               hint: 'Pick a chapter and topic for proper notes', placeholder: 'Or just ask a doubt, e.g. "Why is the determinant zero?"' },
   physics:    { name: 'Physics',             hint: 'Pick a chapter and topic for proper notes', placeholder: 'Or just ask a doubt, e.g. "Why does a laser need population inversion?"' },
   chem:       { name: 'Chemistry',           hint: 'Pick a chapter and topic for proper notes', placeholder: 'Or just ask a doubt, e.g. "Why does iron rust faster in salt water?"' },
@@ -97,6 +98,9 @@ const WELCOME = {
   biz: { icon: '💼', title: 'Business management 💼', text: 'Learn management, marketing, finance, HR and operations with simple examples and mini case studies.',
     chips: [['SWOT analysis', 'Explain SWOT analysis with a real company example'], ['4 Ps of marketing', 'Explain the 4 Ps of marketing with an example'], ['Balance sheet basics', 'Explain a balance sheet in simple words'], ['Leadership styles', 'Explain the main leadership styles with examples']],
     tip: '💡 Tip: paste a case study and ask me to analyse it step by step.' },
+  comm: { icon: '🗣️', title: 'Communication skills 🗣️', text: 'Improve your English, emails, group discussion and presentation skills. Choose a practice type above, or tap 🎧 and practise speaking out loud.',
+    chips: [['Fix my English', 'Practice: Fix my English\nText: I am having a doubt in this topic, please explain me again.'], ['Self-introduction', 'Practice: Spoken English role-play\nText: An interview panel asks me to introduce myself'], ['Email to my professor', 'Practice: Emails and letters\nText: Email to my professor asking for leave for 2 days because of a family function'], ['GD: AI and jobs', 'Practice: Group discussion\nText: Will AI take away jobs?']],
+    tip: '💡 Tip: tap 🎧 for voice mode and speak. I will answer aloud and gently correct your English.' },
   maths: { icon: '📐', title: 'Maths 📐', text: 'Choose a chapter and topic above the message box and get proper class notes with real formulas, derivations, solved examples and exam questions.',
     chips: [['Rank of a matrix', 'Subject: Mathematics\nChapter: Matrices and linear systems\nTopic: Rank of a matrix\nNote type: Detailed notes'], ['Eigenvalues', 'Subject: Mathematics\nChapter: Eigenvalues and eigenvectors\nTopic: Eigenvalues and eigenvectors\nNote type: Detailed notes'], ['Laplace formulas', 'Subject: Mathematics\nChapter: Laplace transforms\nTopic: Standard Laplace transforms\nNote type: Formulas and constants'], ['Fourier series problems', 'Subject: Mathematics\nChapter: Fourier series\nTopic: Fourier series of simple functions\nNote type: Solved problems']],
     tip: '💡 Tip: your sir sent a notes PDF? Tap 📎, attach it, choose a note type and tap Make notes. I will build proper notes from it.' } ,
@@ -114,7 +118,7 @@ const WELCOME = {
     tip: '💡 Tip: this is for studying only. For your own medicine, always ask a doctor or pharmacist.' },
 };
 const JSON_MODES = ['quiz', 'flashcards'];  // these answers are JSON, shown as cards/quiz
-const LEARNING_MODES = ['tutor', 'notes', 'quiz', 'flashcards', 'exam', 'planner', 'challenge', 'interview', 'agri', 'biz', 'pharma', 'maths', 'physics', 'chem', 'bee'];
+const LEARNING_MODES = ['tutor', 'notes', 'quiz', 'flashcards', 'exam', 'planner', 'challenge', 'interview', 'agri', 'biz', 'pharma', 'maths', 'physics', 'chem', 'bee', 'comm'];
 
 // ---------- 3. Saving and loading (localStorage) ----------
 // try/catch because some browsers (private mode) block storage.
@@ -138,7 +142,7 @@ function save(key, value) {
 
 // ---------- 4. App state (data that changes) ----------
 let settings = Object.assign(
-  { theme: 'dark', university: '', semester: '', subject: '', language: 'English', marks: '5', progLang: 'Python', voiceRate: '1', handsFree: true, bargeIn: true, sciType: 'Detailed notes' },
+  { theme: 'dark', university: '', semester: '', subject: '', language: 'English', marks: '5', progLang: 'Python', voiceRate: '1', handsFree: true, bargeIn: true, sciType: 'Detailed notes', commType: 'Fix my English' },
   load(STORE.settings, {})
 );
 let chats = load(STORE.chats, []);
@@ -1513,6 +1517,25 @@ sciChapter.addEventListener('input', renderSciChips);
 $('sciGo').addEventListener('click', makeSciNotes);
 renderSciChips();
 
+// ---------- 20b. Communication skills practice form ----------
+const commBar = $('commBar');
+const commType = $('commType');
+const commText = $('commText');
+function startComm() {
+  if (isLoading) return;
+  const type = commType.value;
+  const text = commText.value.trim();
+  if (!text && !/Spoken English/.test(type)) return toast('Type your topic, sentence or situation first.');
+  const lines = ['Practice: ' + type];
+  lines.push('Text: ' + (text || 'start with a common campus situation'));
+  send(lines.join('\n'), { title: type + (text ? ' · ' + text : '') });
+}
+commType.value = settings.commType || commType.options[0].value;
+if (!commType.value) commType.value = commType.options[0].value;
+commType.addEventListener('change', () => { settings.commType = commType.value; saveSettings(); });
+commText.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); startComm(); } });
+$('commGo').addEventListener('click', startComm);
+
 // ---------- 21. Download an answer as a PDF (uses the browser's print window: choose "Save as PDF") ----------
 const KATEX_CSS = 'https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css';
 function printAnswer(text) {
@@ -1566,6 +1589,7 @@ function setMode(mode) {
   input.placeholder = MODES[mode].placeholder;
   langSelect.classList.toggle('hidden', mode !== 'tutor'); // language picker only for tutor
   marksSelect.classList.toggle('hidden', mode !== 'exam'); // marks picker only for exam mode
+  commBar.classList.toggle('hidden', mode !== 'comm');       // practice form only for Communication skills
   sciBar.classList.toggle('hidden', !SCI_SUBJECT_OF[mode]);   // chapter / topic form only for Maths, Physics, Chemistry and Basic Electrical
   if (SCI_SUBJECT_OF[mode] && sciBar.dataset.mode !== mode) { sciBar.dataset.mode = mode; sciChapter.value = ''; sciTopic.value = ''; const ph = SCI_HINTS[mode]; sciChapter.placeholder = 'e.g. ' + ph[0]; sciTopic.placeholder = 'e.g. ' + ph[1]; renderSciChips(); }
   updateContextBadge();

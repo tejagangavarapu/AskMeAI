@@ -700,3 +700,7 @@ dialog h3 { font-size: 0.85rem; color: var(--muted); text-transform: uppercase; 
 @keyframes m-cr { 0%, 25% { transform: rotate(0); } 50% { transform: rotate(28deg); } 75%, 100% { transform: rotate(0); } }
 .m-flow { stroke-dasharray: 8 14; animation: m-flow 0.9s linear infinite; }
 @keyframes m-flow { to { stroke-dashoffset: -22; } }
+
+:root[data-mode="comm"] { --accent: #f43f5e; --accent-2: #fbbf24; }
+.m-talk { transform-box: fill-box; transform-origin: center; animation: m-talk 0.7s ease-in-out infinite alternate; }
+@keyframes m-talk { from { transform: scaleY(0.4); } to { transform: scaleY(1.4); } }

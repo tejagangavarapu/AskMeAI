@@ -114,6 +114,16 @@ const SCI_TYPES = {
   derivations: 'Write the important DERIVATIONS and PROOFS in full, one by one: state what is to be proved, list assumptions, then numbered steps with the reason for each step, then the result.',
   exam: 'Write EXAM QUESTIONS WITH ANSWERS: 4 questions of 2 marks, 3 of 5 marks and 2 of 10 marks, each with a complete model answer sized for its marks.',
 };
+// Communication skills: what each practice type asks the coach to do
+const COMM_TYPES = {
+  'fix my english': 'PRACTICE = FIX MY ENGLISH. Take the student\'s text. Give: 1) the corrected version, 2) a short list of each mistake with the rule in very simple words and the right form, 3) one more natural way to say the same thing, 4) one tip to avoid the biggest mistake. Be kind and encouraging.',
+  emails: 'PRACTICE = EMAILS AND LETTERS. Write a complete professional email or letter for the situation given (subject line, greeting, short paragraphs, polite closing). Then give 4 quick tips and 3 useful phrases. If the student pasted their own draft, correct it and show the improved version.',
+  'group discussion': 'PRACTICE = GROUP DISCUSSION. For the topic given: a 2-line opening, 5 points FOR, 5 points AGAINST, 3 facts or examples to quote, a closing line, and 6 useful phrases (to start, to agree, to disagree politely, to interrupt politely). Finish with do and don\'t tips.',
+  presentation: 'PRACTICE = PRESENTATION AND SEMINAR. For the topic given: a slide-by-slide outline (6 to 8 slides), the opening hook, what to say on each slide in 1-2 lines, transitions, a strong closing, 5 body-language and voice tips, and 5 questions the audience may ask with short answers.',
+  grammar: 'PRACTICE = GRAMMAR AND VOCABULARY. Explain the topic with simple rules, 6 clear examples (correct and wrong), common mistakes of Indian students, then 8 practice questions followed by an answer key.',
+  'spoken english': 'PRACTICE = SPOKEN ENGLISH ROLE-PLAY. Play the other person in a realistic situation (for example a campus talk, an interview, a shop, a viva). Speak in short natural sentences and ask ONE question at a time. After each student reply, first give a one-line gentle correction if needed ("You can say: ..."), then continue the conversation. Start now with your first line.',
+};
+
 const SCI_SUBJECTS = {
   maths: 'MATHS (engineering mathematics)',
   physics: 'PHYSICS (engineering physics)',
@@ -124,6 +134,7 @@ const sciPrompt = (focus) => `Act as a B.Tech first-year ${focus} teacher for In
 
 // Extra instructions for each "mode" (the tools in the sidebar)
 const MODE_PROMPTS = {
+  comm: 'Act as a friendly COMMUNICATION SKILLS coach for B.Tech students in India whose first language is not English (many speak Telugu or Hindi). Help with spoken English, grammar, vocabulary, emails and letters, group discussions, presentations, self-introduction and confidence. Use simple English, short sentences and Indian examples. You may add a short Telugu or Hindi hint in brackets when it helps, if the student asks. The student message may start with "Practice:" (the type of practice) and "Text:" (their topic or their own sentences). If it is a normal question, just coach them.',
   ...Object.fromEntries(Object.entries(SCI_SUBJECTS).map(([k, f]) => [k, sciPrompt(f)])),
   chat: 'Answer clearly. End with one short follow-up question to check understanding.',
   notes: NOTES_STYLE + ' Subject-independent: adapt the sections to the topic (use formulas and a worked example only where they fit).',
@@ -211,6 +222,11 @@ function prepareRequest(reqBody) {
 
   if (mode === 'tutor' && ALLOWED_LANGUAGES.includes(language)) {
     systemText += `\nThe programming language is ${language}. Use only ${language} for examples.`;
+  }
+  if (mode === 'comm') {
+    const t = String(message).match(/Practice:\s*(.+)/i);
+    const key = Object.keys(COMM_TYPES).find((k) => t && t[1].toLowerCase().includes(k));
+    if (key) systemText += '\n' + COMM_TYPES[key];
   }
   if (SCI_SUBJECTS[mode]) {
     const t = String(message).match(/Note type:\s*(.+)/i);

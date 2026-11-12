@@ -141,3 +141,7 @@ Open **Maths · Physics · Chemistry** in the sidebar. Choose the **Subject**, *
 ## Update: four separate science tools
 
 Under **B.Tech Maths & Science** there are now four tools: 📐 Maths, ⚛️ Physics, 🧪 Chemistry and ⚡ Basic Electrical Engg. Each has its own background, colours, chapter list and chats. Files you attach (PDF, PNG, JPG, WEBP) can now be up to **14 MB**.
+
+## 🗣️ Communication skills
+
+A separate tool (sidebar, "Soft skills"). Choose a practice type (Fix my English, Emails and letters, Group discussion, Presentation and seminar, Grammar and vocabulary, Spoken English role-play), type your topic or your own sentence, and press Start. For speaking practice tap 🎧 and talk: the coach answers aloud and gently corrects your English.
