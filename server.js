@@ -49,15 +49,49 @@ app.set('trust proxy', 1);
 // ---------------------------------------------------------------------
 // Security middleware
 // ---------------------------------------------------------------------
-// helmet adds safe browser rules (CSP). We only add one thing: the maths library
-// (KaTeX, used to draw formulas) is loaded from cdnjs.cloudflare.com.
-const cspDefaults = (helmet.contentSecurityPolicy && helmet.contentSecurityPolicy.getDefaultDirectives)
-  ? helmet.contentSecurityPolicy.getDefaultDirectives() : {};
+// Browser safety headers. We set the important ones ourselves (so they are always
+// present), and helmet adds the rest. The maths library (KaTeX, used to draw formulas)
+// is loaded from cdnjs.cloudflare.com, so scripts may come from there.
+app.disable('x-powered-by'); // do not tell visitors the server runs Express
+app.use((req, res, next) => {
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains'); // always use https
+  res.setHeader('X-Content-Type-Options', 'nosniff');                                // browser must trust the file type we send
+  res.setHeader('X-Frame-Options', 'DENY');                                          // nobody can put this site inside another page
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');               // do not leak full page addresses
+  // Only the microphone (for voice mode) is allowed, on this site only. Camera, location etc. are off.
+  res.setHeader('Permissions-Policy', 'microphone=(self), camera=(), geolocation=(), payment=(), usb=(), interest-cohort=()');
+  next();
+});
+// Content-Security-Policy: the browser may only load things from the places listed here.
+// Scripts: this site and cdnjs (the maths library). Nothing else can run on the page.
+const CSP = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "connect-src 'self'",                          // the page may only talk to this server
+  "font-src 'self' https: data:",                // formula fonts
+  "form-action 'self'",
+  "frame-ancestors 'none'",                      // nobody can put this site inside another page
+  "img-src 'self' data: blob:",
+  "object-src 'none'",
+  "script-src 'self' https://cdnjs.cloudflare.com",
+  "script-src-attr 'none'",
+  "style-src 'self' https: 'unsafe-inline'",
+].join('; ');
+app.use((req, res, next) => {
+  // on https (Render) also upgrade any stray http links; on http://localhost we leave that out
+  res.setHeader('Content-Security-Policy', req.secure ? CSP + '; upgrade-insecure-requests' : CSP);
+  next();
+});
+// helmet adds the rest (cross-origin policies, DNS prefetch, etc.). Its own CSP/HSTS/frame/referrer
+// settings are switched off here because we set them above, so there is only ONE of each header.
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: { ...cspDefaults, 'script-src': ["'self'", 'https://cdnjs.cloudflare.com'] },
-  },
+  contentSecurityPolicy: false,
+  strictTransportSecurity: false,
+  frameguard: false,
+  referrerPolicy: false,
 }));
+
+
 // A PDF/image travels inside the JSON (as text), so a chat request may be up to 22 MB (Gemini accepts about 20 MB per request).
 // We attach this reader to each route AFTER the rate limiter, so anyone sending
 // too many requests is turned away before we read their (big) data.
