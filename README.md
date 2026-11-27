@@ -145,3 +145,9 @@ Under **B.Tech Maths & Science** there are now four tools: 📐 Maths, ⚛️ Ph
 ## 🗣️ Communication skills
 
 A separate tool (sidebar, "Soft skills"). Choose a practice type (Fix my English, Emails and letters, Group discussion, Presentation and seminar, Grammar and vocabulary, Spoken English role-play), type your topic or your own sentence, and press Start. For speaking practice tap 🎧 and talk: the coach answers aloud and gently corrects your English.
+
+## Make Website/App tool
+
+Describe a website or app (for example "a landing page for a coffee shop") and the AI writes one complete `index.html` file using modern HTML, CSS and JavaScript.
+The answer shows a **live preview** with buttons for phone/desktop view, full screen, **Download** (.html file) and Copy code. Ask for changes ("make it blue") or tap **Improve**.
+The preview runs in a sandbox (`/preview/:id` in server.js), so the generated page cannot read your chats or call the API. Previews are kept in memory for 30 minutes.

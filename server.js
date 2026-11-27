@@ -70,6 +70,7 @@ const CSP = [
   "connect-src 'self'",                          // the page may only talk to this server
   "font-src 'self' https: data:",                // formula fonts
   "form-action 'self'",
+  "frame-src 'self'",                            // only our own live-preview frame may be shown
   "frame-ancestors 'none'",                      // nobody can put this site inside another page
   "img-src 'self' data: blob:",
   "object-src 'none'",
@@ -107,6 +108,48 @@ const chatLimiter = rateLimit({
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 app.get('/style.css', (req, res) => res.sendFile(path.join(__dirname, 'style.css')));
 app.get('/script.js', (req, res) => res.sendFile(path.join(__dirname, 'script.js')));
+
+
+// ---------------------------------------------------------------------
+// Live preview for the "Make Website/App" tool.
+// The AI's website is kept in memory for 30 minutes and shown inside an <iframe>.
+// It is served with its own policy: "sandbox" gives it a private, empty identity, so
+// the generated page can run its own scripts and load fonts but can NEVER read this
+// site's data (chats, keys, cookies) or call this server's API.
+// ---------------------------------------------------------------------
+const previews = new Map(); // id -> { html, time }
+const PREVIEW_TTL = 30 * 60 * 1000;
+const PREVIEW_MAX = 200;
+const PREVIEW_CSP = "default-src * data: blob: 'unsafe-inline' 'unsafe-eval'; sandbox allow-scripts allow-forms allow-popups allow-modals allow-pointer-lock allow-downloads; frame-ancestors 'self'";
+
+function prunePreviews() {
+  const now = Date.now();
+  for (const [id, p] of previews) if (now - p.time > PREVIEW_TTL) previews.delete(id);
+  while (previews.size > PREVIEW_MAX) previews.delete(previews.keys().next().value);
+}
+
+app.post('/api/preview', chatLimiter, express.json({ limit: '2mb' }), (req, res) => {
+  const html = req.body && req.body.html;
+  if (typeof html !== 'string' || html.length < 20 || html.length > 1500000) {
+    return res.status(400).json({ error: 'No website to preview.' });
+  }
+  prunePreviews();
+  const id = require('crypto').randomBytes(12).toString('hex');
+  previews.set(id, { html, time: Date.now() });
+  res.json({ id });
+});
+
+app.get('/preview/:id', (req, res) => {
+  const p = previews.get(String(req.params.id));
+  if (!p || Date.now() - p.time > PREVIEW_TTL) {
+    res.status(404).type('html').send('<!doctype html><meta charset="utf-8"><body style="font-family:sans-serif;padding:2rem"><h2>Preview expired</h2><p>Go back to Ask Me AI and press the preview button again.</p>');
+    return;
+  }
+  res.setHeader('Content-Security-Policy', PREVIEW_CSP);
+  res.setHeader('X-Frame-Options', 'SAMEORIGIN'); // only our own page may show it
+  res.setHeader('Cache-Control', 'no-store');
+  res.type('html').send(p.html);
+});
 
 // ---------------------------------------------------------------------
 // The "personality" of the AI
@@ -179,6 +222,16 @@ const MODE_PROMPTS = {
   challenge: 'Give ONE CODING CHALLENGE: title, difficulty, problem statement, example input/output, and 2 hints. Do NOT give the full solution unless asked.',
   interview: 'Give 8 INTERVIEW QUESTIONS (easy, medium, hard), each with a short model answer. Add 2 tips on answering well.',
   agri: 'Act as an AGRICULTURE tutor for B.Sc Agriculture / agri-diploma students in India. Cover agronomy, soil science, horticulture, plant protection, irrigation, farm machinery, agricultural economics and extension. Explain simply, give Indian crop and farming examples (Kharif/Rabi, local varieties), end with 3 quick revision points. Say when practices differ by region and tell the student to confirm chemical doses with the local agricultural officer or the product label.',
+  web: `Act as a world-class FRONT-END DESIGNER and web developer. The student describes a website or web app. Build EXACTLY what the description asks for (use the names, topics, sections, colours and features they mention) as ONE complete, self-contained file named index.html, using the latest web standards.
+QUALITY BAR: it must look like a modern, award-winning 2025 website, never a plain template.
+- Latest HTML5 semantic tags, modern CSS (custom properties, grid, flexbox, clamp() fluid type, gradients, glassmorphism or neumorphism where it suits, backdrop-filter, aspect-ratio, :has(), container-friendly layouts) and modern vanilla JavaScript (ES2023, no frameworks needed).
+- A bold, creative look: a clear colour palette that fits the topic, a great Google Fonts pairing (load with a <link>), big hero section, smooth scroll, hover and focus effects, gentle animations (CSS keyframes, scroll-reveal with IntersectionObserver, animated gradient or floating shapes), and a light/dark theme toggle when it makes sense.
+- Fully responsive (mobile first, works from 320px to wide screens) with a working mobile menu, and accessible (alt text, aria labels, contrast, keyboard focus, prefers-reduced-motion).
+- Real, believable content written for the topic (no lorem ipsum, no "your text here"). Use inline SVG, emoji, CSS shapes and gradients for icons and pictures, so nothing breaks. Do not depend on external image files.
+- Make it WORK: if it is an app (to-do, calculator, quiz, game, dashboard, converter, timer, notes, shop cart...), write the full working logic with good UX (empty states, validation, keyboard support). Forms should validate and show a friendly success message. Never leave buttons that do nothing.
+- Preview note: the page runs in a sandbox, so wrap any localStorage or sessionStorage use in try/catch and fall back to a variable.
+- All CSS in one <style> and all JavaScript in one <script> inside the same file, with short helpful comments.
+OUTPUT FORMAT (very important): reply with exactly ONE markdown code block that starts with three backticks and the word html and contains the WHOLE file from <!DOCTYPE html> to </html>. Never cut the code short. After the code block write only 3 short bullet points: what you built, the main features, and 2 ideas the student can ask next. If the student asks to change an earlier website, return the COMPLETE updated file again, not just the changed part. Reply in the language of the description for the bullets, but keep code in English.`,
   biz: 'Act as a BUSINESS MANAGEMENT tutor for BBA / MBA / commerce students. Cover management principles, marketing, finance and accounting, HR, operations, entrepreneurship and business law. Explain simply with a real company example (Indian companies where possible), use small tables or frameworks (SWOT, 4Ps, Porter) when they help, and end with one exam-style question. If the student pastes a case study, analyse it step by step.',
   pharma: 'Act as a PHARMACY tutor for B.Pharm / D.Pharm / Pharm.D students. Cover pharmaceutics, pharmacology, pharmacognosy, medicinal chemistry, pharmaceutical analysis, pharmacy practice and drug regulations. Explain mechanisms and classifications clearly for exams, use small tables for comparisons, end with 3 quick revision points. This is for STUDY only: do not give personal dosing or treatment advice for a real patient, and tell anyone asking about their own health or medicine to consult a doctor or pharmacist.',
   resume: 'Act as a RESUME and career coach for a fresher engineering student. Give specific, practical advice. If they paste resume text, review it and suggest improvements.',
@@ -281,7 +334,7 @@ function prepareRequest(reqBody) {
     systemText += '\n\n' + LANGUAGE_NOTES[answerLanguage];
   }
   // Voice conversation: the answer will be READ ALOUD, so keep it short and natural
-  if (voice === true && !JSON_MODES.includes(mode)) {
+  if (voice === true && !JSON_MODES.includes(mode) && mode !== 'web') {
     systemText += '\n\nThe student is talking to you by VOICE and your answer will be read aloud. Reply like a friendly spoken conversation: short sentences, plain words, no tables, no headings, no LaTeX (say formulas in words, for example "x squared plus one"), no emojis and no bullet symbols. Keep it under about 120 words unless the student asks for more. If code is really needed, keep it very short and say that it is shown on the screen.';
   }
 
@@ -307,12 +360,12 @@ function prepareRequest(reqBody) {
     ? history
         .slice(-6)
         .filter((m) => m && (m.role === 'user' || m.role === 'model') && typeof m.text === 'string' && m.text.trim())
-        .map((m) => ({ role: m.role, parts: [{ text: m.text.slice(0, 3000) }] }))
+        .map((m) => ({ role: m.role, parts: [{ text: m.text.slice(0, mode === 'web' ? 40000 : 3000) }] }))
     : [];
   contents.push({ role: 'user', parts: lastParts });
 
   // 4096 so long answers (and Hindi/Telugu quizzes, which use more tokens) are not cut off
-  const generationConfig = { temperature: 0.7, maxOutputTokens: (SCI_SUBJECTS[mode] || ['notes', 'exam'].includes(mode)) ? 8192 : 4096 };
+  const generationConfig = { temperature: 0.7, maxOutputTokens: mode === 'web' ? 24000 : (SCI_SUBJECTS[mode] || ['notes', 'exam'].includes(mode)) ? 8192 : 4096 };
   // Quiz and flashcards must come back as clean JSON
   if (JSON_MODES.includes(mode)) generationConfig.responseMimeType = 'application/json';
   // Turn OFF "thinking" for the older Gemini 2.5 Flash models (faster answers)

@@ -57,6 +57,7 @@ const MODES = {
   physics:    { name: 'Physics',             hint: 'Pick a chapter and topic for proper notes', placeholder: 'Or just ask a doubt, e.g. "Why does a laser need population inversion?"' },
   chem:       { name: 'Chemistry',           hint: 'Pick a chapter and topic for proper notes', placeholder: 'Or just ask a doubt, e.g. "Why does iron rust faster in salt water?"' },
   bee:        { name: 'Basic Electrical Engineering', hint: 'Circuits, machines, AC and more', placeholder: 'Or just ask a doubt, e.g. "Difference between star and delta?"' },
+  web:        { name: 'Make Website/App',   hint: 'Describe it, get a live website you can download', placeholder: 'Describe your website or app, e.g. "a modern landing page for a coffee shop with menu and contact form"' },
   pharma:     { name: 'Pharmacy',            hint: 'Pharmaceutics, pharmacology, pharmacognosy', placeholder: 'Ask e.g. "Types of tablets" or "Beta blockers"' },
 };
 
@@ -65,6 +66,9 @@ const WELCOME = {
   chat: { icon: '💬', title: "Hi! I'm Ask Me AI 👋", text: 'Your study buddy for programming, AI/ML, maths and engineering subjects.',
     chips: [['Explain neural networks', 'Explain what a neural network is, step by step'], ['Python loops', 'Teach me loops in Python with examples'], ['Supervised vs Unsupervised', 'Difference between supervised and unsupervised learning'], ['Pointers in C', 'Explain pointers in C for a beginner']],
     tip: '💡 Tip: tap ⚙️ to set your semester and subject, 📎 to attach a PDF, 🎤 to speak.' },
+  web: { icon: '🌐', title: 'Make Website/App 🌐', text: 'Describe the website or app you want. I will build it with the latest web technology, show a live preview here, and you can download the file and open it anywhere.',
+    chips: [['Portfolio website', 'Make a creative portfolio website for a B.Tech AI & ML student with sections: hero, about, skills, projects and a contact form. Dark theme with neon gradients and smooth animations.'], ['Coffee shop site', 'Make a beautiful landing page for a coffee shop called Brew Haven with a hero, menu with prices, gallery section, customer reviews, opening hours and a contact form.'], ['To-do app', 'Make a modern to-do app with add, edit, delete, mark done, filters (all / active / done), a progress bar and dark mode. It should save tasks in the browser.'], ['Quiz game', 'Make a fun quiz game about general knowledge with 10 questions, a timer, score, streak bonus, animations and a final result screen with a restart button.'], ['College fest page', 'Make an exciting landing page for a college tech fest called TechNova 2026 with a countdown timer, events list, schedule tabs, sponsors and a registration form.'], ['Calculator', 'Make a stylish scientific calculator web app with keyboard support, history panel and light/dark themes.']],
+    tip: '💡 Tip: after it is built, ask for changes like "make the colours blue" or "add a pricing section", or tap ✨ Improve.' },
   tutor: { icon: '👨‍💻', title: "Let's learn to code! 👨‍💻", text: 'Pick a language at the top, then type a topic. I will teach it from zero with commented examples.',
     chips: [['Variables and data types', 'Variables and data types'], ['Loops', 'Loops'], ['Functions', 'Functions'], ['Arrays / lists', 'Arrays or lists']],
     tip: '💡 Tip: the language picker is at the top: Python, C, C++, Java, HTML, CSS or JavaScript.' },
@@ -566,11 +570,89 @@ function renderQuiz(bubble, msg) {
 // A saved message looks like:
 //   { role: 'user' | 'model', text, kind: 'text' | 'quiz' | 'flashcards', mode, ... }
 
+// ---- Make Website/App: pick the website code out of the answer and show a live preview ----
+function extractSite(text) {
+  const m = String(text || '').match(/```html[ \t]*\n([\s\S]*?)(?:```|$)/i);
+  if (!m) return null;
+  const code = m[1].trim();
+  return /<(!doctype|html|body|div|section|main|header)/i.test(code) ? code : null;
+}
+const previewCache = new Map(); // website code -> { id, time }  (the server keeps a preview for 30 minutes)
+async function getPreviewId(site) {
+  const hit = previewCache.get(site);
+  if (hit && Date.now() - hit.time < 20 * 60 * 1000) return hit.id;
+  const r = await fetch('/api/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ html: site }) });
+  if (!r.ok) throw new Error('preview failed');
+  const { id } = await r.json();
+  if (previewCache.size > 20) previewCache.delete(previewCache.keys().next().value);
+  previewCache.set(site, { id, time: Date.now() });
+  return id;
+}
+function renderWebsite(bubble, msg) {
+  const site = extractSite(msg.text);
+  const summary = msg.text.replace(/```html[\s\S]*?(?:```|$)/i, '').trim();
+  bubble.innerHTML =
+    '<div class="webprev">' +
+      '<div class="webbar"><span class="dots"><i></i><i></i><i></i></span><span class="wtitle">Live preview</span>' +
+        '<button data-web="desk" class="on" title="Desktop view">💻</button><button data-web="phone" title="Phone view">📱</button>' +
+        '<button data-web="full" title="Open full screen in a new tab">⛶ Full screen</button>' +
+        '<button data-web="dl" title="Download as an .html file">⬇ Download</button>' +
+        '<button data-web="copy" title="Copy the code">📋 Copy code</button>' +
+        '<button data-web="code" title="Show or hide the code">&lt;/&gt; Code</button></div>' +
+      '<div class="webstage"><div class="webwait">⏳ Building your preview…</div></div>' +
+      renderMarkdown('```html\n' + site + '\n```') +
+    '</div>' + (summary ? renderMarkdown(summary) : '') + (msg.stopped ? '<p class="stopped">⏹ Stopped</p>' : '');
+  const panel = bubble.querySelector('.webprev');
+  panel._site = site;
+  getPreviewId(site).then((id) => {
+    panel.dataset.pid = id;
+    const stage = panel.querySelector('.webstage');
+    const f = document.createElement('iframe');
+    f.title = 'Live preview of your website';
+    f.setAttribute('sandbox', 'allow-scripts allow-forms allow-popups allow-modals allow-downloads allow-pointer-lock');
+    f.src = '/preview/' + id;
+    stage.innerHTML = '';
+    stage.appendChild(f);
+  }).catch(() => {
+    panel.querySelector('.webwait').textContent = '⚠️ Could not build the preview. You can still use ⬇ Download or 📋 Copy code.';
+  });
+}
+function siteFileName(site) {
+  const t = (site.match(/<title[^>]*>([^<]{1,60})/i) || [])[1] || 'my-website';
+  return (t.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'my-website') + '.html';
+}
+function webPanelClick(btn) {
+  const panel = btn.closest('.webprev');
+  const site = panel._site;
+  const what = btn.dataset.web;
+  if (what === 'desk' || what === 'phone') {
+    panel.querySelector('.webstage').classList.toggle('phone', what === 'phone');
+    panel.querySelectorAll('[data-web="desk"],[data-web="phone"]').forEach((b) => b.classList.toggle('on', b === btn));
+  } else if (what === 'full') {
+    if (!panel.dataset.pid) return toast('The preview is still loading. Try again in a second.');
+    window.open('/preview/' + panel.dataset.pid, '_blank', 'noopener');
+  } else if (what === 'dl') {
+    const url = URL.createObjectURL(new Blob([site], { type: 'text/html' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = siteFileName(site);
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast('Downloaded! Double-click the file to open your website.');
+  } else if (what === 'copy') {
+    copyText(site, btn);
+  } else if (what === 'code') {
+    panel.classList.toggle('showcode');
+    btn.classList.toggle('on', panel.classList.contains('showcode'));
+  }
+}
+
 function fillAiBubble(bubble, msg) {
   if (msg.kind === 'flashcards') {
     try { renderFlashcards(bubble, msg.text); } catch { bubble.innerHTML = renderMarkdown(msg.text); }
   } else if (msg.kind === 'quiz') {
     renderQuiz(bubble, msg);
+  } else if (msg.mode === 'web' && extractSite(msg.text)) {
+    renderWebsite(bubble, msg);
   } else {
     const body = msg.text ? renderMarkdown(msg.text) : '';
     const note = msg.text ? '⏹ Stopped' : '⏹ Stopped before an answer arrived. Press Regenerate to try again.';
@@ -591,7 +673,13 @@ function buildActions(msg, isLast) {
     b.textContent = label;
     bar.appendChild(b);
   };
-  if (msg.kind === 'text') {
+  if (msg.kind === 'text' && msg.mode === 'web') {
+    if (msg.text) add('📋 Copy code', 'copy');
+    if (isLast) {
+      add('🔄 Regenerate', 'regen');
+      if (msg.text) add('✨ Improve', 'improve');
+    }
+  } else if (msg.kind === 'text') {
     if (msg.text) add('📋 Copy', 'copy');
     if (msg.text && window.speechSynthesis) add('🔊 Listen', 'listen');
     if (msg.text) add('📄 PDF', 'pdf');
@@ -989,6 +1077,8 @@ chatBox.addEventListener('click', async (e) => {
   }
 
   // Buttons under an answer
+  const wbtn = e.target.closest('[data-web]');
+  if (wbtn) return webPanelClick(wbtn);
   const btn = e.target.closest('[data-action]');
   if (!btn) return;
   const action = btn.dataset.action;
@@ -1005,12 +1095,13 @@ chatBox.addEventListener('click', async (e) => {
   const msg = chat && chat.messages[Number(row.dataset.index)];
   if (!msg) return;
 
-  if (action === 'copy') return copyText(msg.text, btn);
+  if (action === 'copy') return copyText((msg.mode === 'web' && extractSite(msg.text)) || msg.text, btn);
   if (action === 'listen') return toggleReadAloud(msg.text, btn);
   if (action === 'pdf') return printAnswer(msg.text);
   if (isLoading) return toast('Please wait, or press ■ to stop first.');
 
   if (action === 'regen') regenerate(Number(row.dataset.index));
+  else if (action === 'improve') send('Improve the website you just made: make the design more creative and polished, add richer animations and one more useful section or feature. Return the COMPLETE updated file.', { mode: 'web', followUp: true });
   else if (action === 'simpler') send('Explain that again in simpler words, with an easy real-life example.', { mode: 'chat', followUp: true });
   else if (action === 'deeper') send('Go deeper on that: add more detail, edge cases and a harder example.', { mode: 'chat', followUp: true });
 });
